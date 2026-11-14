@@ -4,7 +4,6 @@
   "description": "Pi extension. Timed progress reports for long sessions, shown next to the todo list.",
   "private": true,
   "type": "module",
-  "license": "MIT",
   "keywords": ["pi-package", "pi-extension"],
   "pi": {
     "extensions": [
