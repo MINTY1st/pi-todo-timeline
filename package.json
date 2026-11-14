@@ -2,11 +2,15 @@
   "name": "@minty1st/pi-todo-timeline",
   "version": "0.1.0",
   "description": "Pi extension. A todo list with timed progress reports, shown in panels above the editor and on an HTML page.",
-  "private": true,
   "type": "module",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MINTY1st/pi-todo-timeline.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "keywords": [
     "pi-package",
@@ -19,6 +23,8 @@
   "files": [
     "src",
     "README.md",
+    "README.ja.md",
+    "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
   "pi": {
