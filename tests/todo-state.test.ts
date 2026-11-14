@@ -90,6 +90,14 @@ test("待つ相手は、作成のときに決め、更新で足したり外し�
 	for (const [params, expected] of cases) assert.match(applyTodo(deleted, params).text, expected);
 });
 
+test("同じ相手を何度足しても、待つ相手には1回だけ入る", () => {
+	const twice = play([three, { action: "update", id: 2, addBlockedBy: [3, 3] }]);
+	assert.deepEqual(twice.state.tasks[1].blockedBy, [3]);
+	const again = applyTodo(twice.state, { action: "update", id: 2, addBlockedBy: [3] });
+	assert.deepEqual([again.changed, again.text], [false, "No change: #2 already matches the requested values (status: pending)"]);
+	assert.deepEqual(applyTodo(twice.state, { action: "update", id: 2, addBlockedBy: [1, 3, 1] }).state.tasks[1].blockedBy, [3, 1]);
+});
+
 test("一覧は消したものを除いて並べ、状態で絞れる。進行中の作業と待つ相手を添える", () => {
 	const state = play([three, { action: "update", id: 2, status: "in_progress", activeForm: "修正中" }, { action: "update", id: 3, addBlockedBy: [2] }, { action: "delete", id: 1 }]).state;
 	const listed = applyTodo(state, { action: "list" });

@@ -124,7 +124,8 @@ function nextBlockedBy(state: TodoState, current: Task, params: TodoParams): num
 	const kept = (current.blockedBy ?? []).filter((id) => !removed.has(id));
 	const added = params.addBlockedBy ?? [];
 	if (added.includes(current.id)) return `cannot block #${current.id} on itself`;
-	return blockedByProblem(state, added, "addBlockedBy") ?? [...kept, ...added.filter((id) => !kept.includes(id))];
+	// 同じ相手を何度足しても1回だけ入るよう、重なりを除く（先に出た順を保つ）
+	return blockedByProblem(state, added, "addBlockedBy") ?? [...new Set([...kept, ...added])];
 }
 
 function withChanges(current: Task, params: TodoParams, blockedBy: readonly number[]): Task {
