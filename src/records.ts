@@ -1,4 +1,6 @@
 // レポートの型と、セッションの記録からの復元
+import { isObject } from "./shared.ts";
+
 export const REPORT_ENTRY_TYPE = "pi-timeline-report";
 
 export interface Summary {
@@ -20,9 +22,6 @@ export interface Report {
 	summary: Summary;
 }
 
-type Fields = Record<string, unknown>;
-
-const isObject = (value: unknown): value is Fields => typeof value === "object" && value !== null && !Array.isArray(value);
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === "string");
 const isCount = (value: unknown): boolean => Number.isSafeInteger(value) && (value as number) >= 0;
 

@@ -2,15 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { collectDelta } from "../src/delta.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import { assistant, custom, ms, report, text, thinking, toolCall, toolResult, user } from "./fixtures.ts";
+import { custom, ms, report, session, toolResult, user } from "./fixtures.ts";
 
 const limits = { maxChars: 10_000, maxItemChars: 200 };
-const session = () => [
-	user("10:00", "同期の不具合を直して"),
-	assistant("10:01", [thinking("まずテストを見る"), text("テストを実行します"), toolCall("bash", { command: "npm test" })]),
-	toolResult("10:02", "bash", "51 passed"),
-	assistant("10:03", [text("直しました")]),
-];
 
 test("発言・ツールの呼び出し・ツールの結果を1件1行にし、思考は含めない", () => {
 	const delta = collectDelta(session(), 0, limits);

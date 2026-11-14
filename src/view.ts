@@ -1,5 +1,7 @@
 // /timeline の表示と、rpiv-todo の記録からのタスクの読み取り
 import type { Report } from "./records.ts";
+import { clip, isObject } from "./shared.ts";
+import type { Fields } from "./shared.ts";
 
 export interface TaskView {
 	id: number;
@@ -27,9 +29,6 @@ const TASK_STATUSES = new Set(["pending", "in_progress", "completed", "deleted"]
 const STATUS_MARKS = { completed: "✓", in_progress: "◐", pending: "○" } as const;
 const RESULT_MAX_CHARS = 200;
 
-type Fields = Record<string, unknown>;
-
-const isObject = (value: unknown): value is Fields => typeof value === "object" && value !== null && !Array.isArray(value);
 const isOptionalText = (value: unknown): boolean => value === undefined || typeof value === "string";
 
 function isStoredTask(value: unknown): value is Fields {
@@ -48,16 +47,11 @@ export function tasksFromBranch(entries: Iterable<unknown>): TaskView[] {
 	return latest.filter((task) => task.status !== "deleted") as unknown as TaskView[];
 }
 
-function flatten(value: string, maxChars: number): string {
-	const flat = value.replace(/\s+/g, " ").trim();
-	return flat.length > maxChars ? `${flat.slice(0, maxChars)}…` : flat;
-}
-
 export function taskLines(tasks: readonly TaskView[]): string[] {
 	return tasks.flatMap((task) => {
 		const active = task.status === "in_progress" && task.activeForm ? `（${task.activeForm}）` : "";
 		const head = `${STATUS_MARKS[task.status]} #${task.id} ${task.subject}${active}`;
-		const result = task.status === "completed" && task.description ? [`    ${flatten(task.description, RESULT_MAX_CHARS)}`] : [];
+		const result = task.status === "completed" && task.description ? [`    ${clip(task.description, RESULT_MAX_CHARS)}`] : [];
 		return [head, ...result];
 	});
 }
@@ -86,10 +80,21 @@ function detailLines(report: Report, head: string): string[] {
 	];
 }
 
+type ClockInput = Pick<ViewInput, "now" | "timeZone" | "levelLabels">;
+
+function createHead(input: ClockInput): (report: Report) => string {
+	const range = createClock(input.now, input.timeZone);
+	return (report) => `${input.levelLabels[report.level] ?? `段${report.level + 1}`} ${range(report)}`;
+}
+
+/** レポートの見出し。段の間隔と、覆った時刻の範囲 */
+export function reportHead(report: Report, input: ClockInput): string {
+	return createHead(input)(report);
+}
+
 function reportLines(input: ViewInput): string[] {
 	if (input.reports.length === 0) return ["レポートはまだありません"];
-	const range = createClock(input.now, input.timeZone);
-	const head = (report: Report): string => `${input.levelLabels[report.level] ?? `段${report.level + 1}`} ${range(report)}`;
+	const head = createHead(input);
 	const newestFirst = [...input.reports].sort((left, right) => right.end - left.end || right.level - left.level);
 	const latest = newestFirst.find((report) => report.level === 0) ?? newestFirst[0];
 	const others = newestFirst.filter((report) => report !== latest);

@@ -1,4 +1,7 @@
 // 前回のレポートより後のセッションの記録を、要約に渡す文に直す
+import { clip, isObject } from "./shared.ts";
+import type { Fields } from "./shared.ts";
+
 export interface DeltaLimits {
 	/** 1回の要約に渡す文字数の上限。超えた分は次回に持ち越す */
 	maxChars: number;
@@ -21,15 +24,7 @@ interface DeltaItem {
 	toolCalls: number;
 }
 
-type Fields = Record<string, unknown>;
-
-const isObject = (value: unknown): value is Fields => typeof value === "object" && value !== null && !Array.isArray(value);
 const clockOf = (time: number): string => new Date(time).toISOString().slice(11, 16);
-
-function clip(value: string, maxChars: number): string {
-	const flat = value.replace(/\s+/g, " ").trim();
-	return flat.length > maxChars ? `${flat.slice(0, maxChars)}…` : flat;
-}
 
 function textOf(content: unknown): string {
 	if (typeof content === "string") return content;

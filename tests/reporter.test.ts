@@ -4,16 +4,10 @@ import { resolveConfig } from "../src/config.ts";
 import type { ModelRequest } from "../src/prompt.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
 import { produceReports } from "../src/reporter.ts";
-import { assistant, custom, ms, report, text, toolCall, toolResult, user } from "./fixtures.ts";
+import { assistant, custom, ms, report, session, text, toolCall, user } from "./fixtures.ts";
 
 const config = resolveConfig({ provider: "p", model: "m" }).config;
 const answer = (first: string) => JSON.stringify({ progress: [first], uncertainties: [], userActions: [] });
-const session = () => [
-	user("10:00", "同期の不具合を直して"),
-	assistant("10:01", [text("テストを実行します"), toolCall("bash", { command: "npm test" })]),
-	toolResult("10:02", "bash", "51 passed"),
-	assistant("10:03", [text("直しました")]),
-];
 const saved = (id: string, start: string, end: string, toolCount = 2) => custom(end, REPORT_ENTRY_TYPE, report({ id, start: ms(start), end: ms(end), createdAt: ms(end), toolCount }));
 
 function fakeModel(answers: Array<string | Error>, clock: string) {

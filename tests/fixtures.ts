@@ -17,6 +17,14 @@ export const toolResult = (clock: string, toolName: string, output: string, isEr
 });
 export const custom = (clock: string, customType: string, data: unknown) => ({ ...base(clock), type: "custom", customType, data });
 
+/** 10:00 に頼まれ、テストを1回実行し、10:03 に直し終えたセッション */
+export const session = () => [
+	user("10:00", "同期の不具合を直して"),
+	assistant("10:01", [thinking("まずテストを見る"), text("テストを実行します"), toolCall("bash", { command: "npm test" })]),
+	toolResult("10:02", "bash", "51 passed"),
+	assistant("10:03", [text("直しました")]),
+];
+
 export const report = (overrides: Record<string, unknown> = {}) => ({
 	version: 1,
 	id: "r1",
