@@ -35,7 +35,28 @@ export interface HostContext {
 	modelRegistry: ModelRegistryLike;
 }
 
+export interface ToolResult {
+	content: Array<{ type: "text"; text: string }>;
+	details: unknown;
+	isError?: boolean;
+}
+
+/** pi.registerTool に渡す定義のうち、この拡張が使う欄 */
+export interface ToolDefinition {
+	name: string;
+	label: string;
+	description: string;
+	promptSnippet: string;
+	promptGuidelines: string[];
+	/** 引数の JSON Schema */
+	parameters: object;
+	executionMode: "sequential";
+	prepareArguments(raw: unknown): unknown;
+	execute(toolCallId: string, params: unknown, signal: unknown, onUpdate: unknown, context: HostContext): Promise<ToolResult>;
+}
+
 export interface TimelineHost {
+	registerTool(definition: ToolDefinition): void;
 	on(event: "session_start" | "turn_end" | "session_shutdown", handler: (event: unknown, context: HostContext) => unknown): void;
 	registerCommand(name: string, options: { description: string; handler: (argumentText: string, context: HostContext) => Promise<void> }): void;
 	appendEntry(customType: string, data: unknown): void;
