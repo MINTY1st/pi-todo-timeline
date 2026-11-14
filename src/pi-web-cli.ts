@@ -76,16 +76,22 @@ function reportPopup(wanted: boolean, outcome: PatchOutcome): string[] {
 	return [outcome.changed.length > 0 ? `小窓のスクリプトを足しました: ${names}` : `小窓のスクリプトはすでに入っています: ${names}`];
 }
 
+/** 小窓のスクリプトを足す。足さないとき（remove か、設定で切ってあるとき）は、入っていれば外す */
+function patchPopup(piWeb: string, action: Action, context: CliContext): { wanted: boolean; outcome: PatchOutcome } {
+	const wanted = action === "apply" && context.popup();
+	const directory = join(piWeb, ".next", "static", "chunks", "app");
+	return { wanted, outcome: applyPatch(context.files, directory, isLayoutChunk, wanted ? buildPopupScript() : undefined, POPUP_TARGET_MISSING) };
+}
+
 /** 見つかった Pi Web に、高さの上書きと小窓のスクリプトを足す（外す） */
 function patchPiWeb(piWeb: string, action: Action, context: CliContext): { exitCode: number; lines: string[] } {
 	const percent = action === "apply" ? context.percent() : undefined;
 	const css = applyToDirectory(context.files, cssDirectoryOf(piWeb), percent === undefined ? undefined : buildRule(percent));
 	if (!css.ok) return { exitCode: 1, lines: [css.message] };
-	const wanted = action === "apply" && context.popup();
-	const popup = applyPatch(context.files, join(piWeb, ".next", "static", "chunks", "app"), isLayoutChunk, wanted ? buildPopupScript() : undefined, POPUP_TARGET_MISSING);
-	const changed = css.changed.length > 0 || (popup.ok && popup.changed.length > 0);
-	const lines = [...reportCss(action, css, percent), ...reportPopup(wanted, popup), ...(changed ? [RELOAD_HINT] : [])];
-	return { exitCode: wanted && !popup.ok ? 1 : 0, lines };
+	const popup = patchPopup(piWeb, action, context);
+	const changed = [css, popup.outcome].some((outcome) => outcome.ok && outcome.changed.length > 0);
+	const lines = [...reportCss(action, css, percent), ...reportPopup(popup.wanted, popup.outcome)];
+	return { exitCode: popup.wanted && !popup.outcome.ok ? 1 : 0, lines: changed ? [...lines, RELOAD_HINT] : lines };
 }
 
 export function run(argv: readonly string[], context: CliContext): { exitCode: number; lines: string[] } {
