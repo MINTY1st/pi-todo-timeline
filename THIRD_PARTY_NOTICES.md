@@ -1,6 +1,10 @@
 # Third-party notices
 
-`src/prompt.ts` のレポートの文体の決まりと JSON の形（`progress` / `uncertainties` / `userActions`）、`src/config.ts` の既定の `focus` の文は、[deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) の `packages/experimental/timeline`（コミット 39163dd、MIT）の `src/prompt.ts` と `src/defaults.ts` を元に書き換えたもの。一定の間隔でレポートを作り、上の段で束ねる考え方も同じパッケージに倣った。コードは写していない。
+No third-party source code is copied into this package. The works below shaped parts of it, and their notices are reproduced here.
+
+## DeepSeek Harness Timeline
+
+The report writing rules and JSON shape (`progress`, `uncertainties`, `userActions`) in `src/prompt.ts`, and the default `focus` text in `src/config.ts`, are adapted from `src/prompt.ts` and `src/defaults.ts` of `packages/experimental/timeline` in [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) (commit 39163dd, MIT). The idea of timed reports that roll up into longer ones comes from the same package.
 
 ```text
 MIT License
@@ -26,7 +30,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-同パッケージは、レポートの仕組みを [kermanx/dsh-progress-check](https://github.com/kermanx/dsh-progress-check)（MIT）から取り入れている。
+That package takes its report mechanism from [kermanx/dsh-progress-check](https://github.com/kermanx/dsh-progress-check) (MIT).
 
 ```text
 MIT License
@@ -52,7 +56,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-`src/todo-state.ts` と `src/todo-tool.ts` の `todo` ツールは、[@juicesharp/rpiv-todo](https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo)（2.15.0、MIT）と置き換えて使えるよう、操作の種類、引数の名前、応答の文、状態の移り変わりの決まり、記録の形を同じにしてある。モデルへの指示文の一部も、同パッケージの文を元に書き換えた。コードは写していない。
+## rpiv-todo
+
+The `todo` tool in `src/todo-state.ts` and `src/todo-tool.ts` uses the same action names, argument names, reply texts, status transitions, and record shape as [@juicesharp/rpiv-todo](https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo) (2.15.0, MIT), so that existing sessions and model habits carry over. Some of the instructions given to the model are rewritten from that package's text.
 
 ```text
 MIT License
