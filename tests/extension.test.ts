@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { resolveConfig } from "../src/config.ts";
 import { createExtension } from "../src/extension.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import { at, custom, fakeFiles, ms, session, user } from "./fixtures.ts";
+import { at, custom, fakeFiles, ms, plain, session, user } from "./fixtures.ts";
 
 type Handler = (...values: unknown[]) => unknown;
 const answer = (first: string) => ({ role: "assistant", stopReason: "stop", content: [{ type: "text", text: JSON.stringify({ progress: [first], uncertainties: [], userActions: [] }) }] });
@@ -37,12 +37,28 @@ function fakeRegistry(state: { modelFound: boolean; hasAuth: boolean }) {
 	};
 }
 
+/** 偽の画面。通知と、今出ているパネル、パネルを送った履歴を覚える */
+function fakeScreen() {
+	const notices: string[] = [];
+	const widgets = new Map<string, string[]>();
+	const widgetCalls: Array<string[] | undefined> = [];
+	const ui = {
+		notify: (message: string) => void notices.push(message),
+		setWidget: (key: string, lines: string[] | undefined) => {
+			widgetCalls.push(lines);
+			if (lines === undefined) widgets.delete(key);
+			else widgets.set(key, lines);
+		},
+	};
+	return { notices, widgets, widgetCalls, ui };
+}
+
 function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
 	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true };
 	const handlers = new Map<string, Handler>();
 	const commands = new Map<string, { handler: Handler }>();
 	const branch: unknown[] = session();
-	const notices: string[] = [];
+	const screen = fakeScreen();
 	const files = fakeFiles();
 	const model = fakeRegistry(state);
 	const host = {
@@ -59,14 +75,18 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 			getHeader: () => ({ timestamp: at("10:00") }),
 			getSessionName: () => "同期の不具合",
 		},
-		ui: { notify: (message: string) => void notices.push(message) },
+		ui: screen.ui,
 		modelRegistry: model.registry,
 	};
 	let serial = 0;
 	createExtension({ files, loadConfig: () => resolveConfig(rawConfig), configLocation: "/c/config.json", now: () => state.now, newId: () => `new${++serial}`, timeZone: "UTC" })(host as never);
 	const reports = () => branch.filter((entry) => (entry as { customType?: string }).customType === REPORT_ENTRY_TYPE);
 	return {
-		state, branch, notices, reports, files,
+		state, branch, reports, files,
+		notices: screen.notices,
+		panel: () => plain(screen.widgets.get("timeline") ?? []),
+		widgetCalls: screen.widgetCalls,
+		sessionStart: () => handlers.get("session_start")?.({ type: "session_start" }, context),
 		stored: files.stored,
 		calls: model.calls,
 		setRespond: model.setRespond,
@@ -340,4 +360,65 @@ test("設定ファイルに使えない値があれば、/timeline に添える"
 	const pi = setup({ provider: "p", model: "m", intervalMinutes: 0 });
 	await pi.command();
 	assert.match(pi.notices.at(-1) ?? "", /intervalMinutes は 1〜1440 の整数で書く/);
+});
+
+test("ターンの終わりに、下のボタンから開くパネルを今の状態にする", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	pi.turnEnd();
+	await flush();
+	assert.deepEqual(pi.panel(), ["進捗 ░░░░░░░░░░░░░░░░░░░░ 0%  0/1 完了 · 経過 3分", "今   #1 不具合を直す（修正中）", "", "◐ #1 不具合を直す", "", `ページ ${PAGE_PATH}`]);
+});
+
+test("レポートができたら、パネルにも出す", async () => {
+	const pi = setup();
+	pi.turnEnd();
+	await flush();
+	assert.deepEqual(pi.panel().slice(0, 2), ["15分 10:00–10:03  ツール 1 回", "  ・不具合を直した"]);
+});
+
+test("中身が変わらなければパネルを送り直さず、タスクもレポートも無ければ出さない", async () => {
+	const empty = setup(undefined, "10:05");
+	empty.turnEnd();
+	await flush();
+	assert.deepEqual(empty.widgetCalls, []);
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	pi.turnEnd();
+	pi.turnEnd();
+	await flush();
+	assert.equal(pi.widgetCalls.length, 1);
+});
+
+test("出していたパネルは、タスクが無くなったら消す", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	pi.turnEnd();
+	pi.branch.push(custom("10:05", "rpiv-todo-state", { tasks: [], nextId: 2 }));
+	pi.turnEnd();
+	await flush();
+	assert.deepEqual(pi.widgetCalls.at(-1), undefined);
+	assert.deepEqual(pi.panel(), []);
+});
+
+test("セッションを開いたときにもパネルを出し、閉じたら消す", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	pi.sessionStart();
+	assert.equal(pi.panel()[1], "今   #1 不具合を直す（修正中）");
+	pi.shutdown();
+	assert.deepEqual(pi.panel(), []);
+});
+
+test("パネルを切ってあるか、画面の無い実行なら、パネルを出さない", async () => {
+	const off = setup({ provider: "p", model: "m", panel: false }, "10:05");
+	off.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	off.turnEnd();
+	const headless = setup(undefined, "10:05");
+	headless.state.hasUI = false;
+	headless.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	headless.sessionStart();
+	headless.turnEnd();
+	await flush();
+	assert.deepEqual([...off.widgetCalls, ...headless.widgetCalls], []);
 });

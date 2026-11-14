@@ -3,10 +3,8 @@ import assert from "node:assert/strict";
 import { renderPanel } from "../src/panel.ts";
 import type { Report } from "../src/records.ts";
 import type { TaskView } from "../src/view.ts";
-import { ms, report } from "./fixtures.ts";
+import { ESCAPE, ms, plain, report } from "./fixtures.ts";
 
-const ESCAPE = String.fromCharCode(27);
-const plain = (lines: string[]) => lines.map((line) => line.replaceAll(new RegExp(`${ESCAPE}\\[[0-9;]*m`, "g"), ""));
 const colored = (code: number, text: string) => `${ESCAPE}[${code}m${text}${ESCAPE}[0m`;
 const tasks: TaskView[] = [
 	{ id: 1, subject: "不具合を再現する", status: "completed", description: "失敗するテストを足した" },

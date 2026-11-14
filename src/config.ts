@@ -23,6 +23,9 @@ export interface TimelineConfig {
 	page: boolean;
 	/** ページの置き場。相対パスなら作業ディレクトリから */
 	pageDirectory: string;
+	/** 入力欄の上に、色つきの文字のパネルを出す */
+	panel: boolean;
+	panelMaxTasks: number;
 }
 
 export interface LoadedConfig {
@@ -47,6 +50,7 @@ const NUMBER_RULES = {
 	maxLineChars: { min: 40, max: 1000, fallback: 160 },
 	timeoutSeconds: { min: 5, max: 600, fallback: 120 },
 	maxOutputTokens: { min: 200, max: 16_000, fallback: 4000 },
+	panelMaxTasks: { min: 1, max: 50, fallback: 10 },
 } satisfies Record<string, NumberRule>;
 
 type Fields = Record<string, unknown>;
@@ -100,6 +104,8 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 		enabled: reader.flag("enabled", true),
 		notify: reader.flag("notify", true),
 		page: reader.flag("page", true),
+		panel: reader.flag("panel", true),
+		panelMaxTasks: reader.count("panelMaxTasks"),
 		pageDirectory: texts.pageDirectory ?? DEFAULT_PAGE_DIRECTORY,
 	};
 	return { config, problems };

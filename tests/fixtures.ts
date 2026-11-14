@@ -17,6 +17,10 @@ export const toolResult = (clock: string, toolName: string, output: string, isEr
 });
 export const custom = (clock: string, customType: string, data: unknown) => ({ ...base(clock), type: "custom", customType, data });
 
+export const ESCAPE = String.fromCharCode(27);
+/** 色の指定を取り除いた行 */
+export const plain = (lines: readonly string[]): string[] => lines.map((line) => line.replaceAll(new RegExp(`${ESCAPE}\\[[0-9;]*m`, "g"), ""));
+
 /** メモリの上の偽のファイル。failure を入れると、書き込みがその例外で失敗する */
 export function fakeFiles(initial: Record<string, string> = {}) {
 	const stored = new Map(Object.entries(initial));
