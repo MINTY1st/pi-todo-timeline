@@ -1,8 +1,16 @@
-# pi-timeline
+# pi-todo-timeline
 
 長い作業の進み具合を、一定の間隔のレポートとしてセッションに残す pi の拡張機能。タスクの状態とレポートを1枚の HTML のページに書き出し、`/timeline` でも表示する。
 
 DeepSeek Harness の Timeline プラグイン（`@deepseek-ai/dsh-timeline`）のうち、定期レポートの部分を pi 向けに作り直したもの。タスクの管理は作らず、[`@juicesharp/rpiv-todo`](https://www.npmjs.com/package/@juicesharp/rpiv-todo) の記録を読む。
+
+## 導入
+
+```bash
+pi install git:github.com/MINTY1st/pi-todo-timeline
+```
+
+入れたら pi を起動し直すか `/reload` する。レポートを作るには、下の「設定」でモデルを指定する。
 
 ## 使い方
 
@@ -52,7 +60,7 @@ DeepSeek Harness の Timeline プラグイン（`@deepseek-ai/dsh-timeline`）�
 
 設定ファイルに、レポートを書かせるモデルを指定する。指定するまでレポートは作らない。
 
-場所は `$PI_TIMELINE_CONFIG`、`$XDG_CONFIG_HOME/pi-timeline/config.json`、`~/.config/pi-timeline/config.json` の順に決まる。
+場所は `$PI_TODO_TIMELINE_CONFIG`、`$XDG_CONFIG_HOME/pi-todo-timeline/config.json`、`~/.config/pi-todo-timeline/config.json` の順に決まる。
 
 ```json
 {
@@ -104,7 +112,7 @@ flowchart TD
 - 添えるタスクの状態は、そのレポートが覆う区間の終わりの時点のもの。過去の区間のレポートに、後の状態は混ぜない
 - **1時間のレポートには元の記録を渡さない**。15分のレポートの要約だけを束ねる
 - モデルの返答は JSON で受け取り、件数と長さを確かめる。合わなければ理由を付けて1回だけ直しを頼む。返答に文が無いとき、出力の上限で途中で切れたとき、JSON として読めないときは、直しを頼まず失敗として扱う（元の中身が無いのに直させると、中身の無いレポートができるため）
-- レポートは `pi-timeline-report` という種類の記録としてセッションに残る。モデルの文脈には入らない。`/tree` で過去に戻ると、その時点までのレポートだけが見える
+- レポートは `pi-timeline-report` という種類の記録としてセッションに残る（拡張の名前を変える前の記録も読めるよう、この名前は変えていない）。モデルの文脈には入らない。`/tree` で過去に戻ると、その時点までのレポートだけが見える
 - 画面の無い実行（`pi -p` や、サブエージェントとして動く子の pi）では何もしない
 
 ### レポートの形

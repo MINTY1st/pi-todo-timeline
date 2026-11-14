@@ -106,9 +106,9 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 }
 
 export function configPath(environment: Record<string, string | undefined>): string {
-	if (environment.PI_TIMELINE_CONFIG) return environment.PI_TIMELINE_CONFIG;
+	if (environment.PI_TODO_TIMELINE_CONFIG) return environment.PI_TODO_TIMELINE_CONFIG;
 	const base = environment.XDG_CONFIG_HOME || join(environment.HOME ?? "", ".config");
-	return join(base, "pi-timeline", "config.json");
+	return join(base, "pi-todo-timeline", "config.json");
 }
 
 /** 設定ファイルを読む。ファイルが無ければ既定値、読めなければ既定値にして problems で知らせる */
