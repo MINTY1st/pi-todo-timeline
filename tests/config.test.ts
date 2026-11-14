@@ -27,6 +27,13 @@ test("書かれた値を使い、分と秒の指定はミリ秒に直す", () =>
 	assert.deepEqual(problems, []);
 });
 
+test("ページは既定で書き出し、置き場は .pi/timeline。切ることも、置き場を変えることもできる", () => {
+	const defaults = resolveConfig({}).config;
+	assert.deepEqual([defaults.page, defaults.pageDirectory], [true, ".pi/timeline"]);
+	const custom = resolveConfig({ page: false, pageDirectory: "/shared/pages" }).config;
+	assert.deepEqual([custom.page, custom.pageDirectory], [false, "/shared/pages"]);
+});
+
 test("思考の強さは書かれていればそのまま使い、無ければ指定しない", () => {
 	assert.equal(resolveConfig({}).config.reasoning, undefined);
 	assert.equal(resolveConfig({ reasoning: "low" }).config.reasoning, "low");

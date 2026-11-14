@@ -19,6 +19,10 @@ export interface TimelineConfig {
 	timeoutMs: number;
 	maxOutputTokens: number;
 	notify: boolean;
+	/** タスクとレポートを HTML のページに書き出す */
+	page: boolean;
+	/** ページの置き場。相対パスなら作業ディレクトリから */
+	pageDirectory: string;
 }
 
 export interface LoadedConfig {
@@ -33,6 +37,7 @@ interface NumberRule {
 }
 
 const DEFAULT_LANGUAGE = "日本語";
+const DEFAULT_PAGE_DIRECTORY = ".pi/timeline";
 const DEFAULT_FOCUS = "Focus on what changed and why it matters to the user's goal. Lead with a concrete result or finding. Add useful evidence, consequences, and remaining gaps when the record supports them.";
 const NUMBER_RULES = {
 	intervalMinutes: { min: 1, max: 1440, fallback: 15 },
@@ -78,7 +83,7 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 	const isFields = typeof raw === "object" && raw !== null && !Array.isArray(raw);
 	if (!isFields) problems.push("設定は JSON のオブジェクトで書く");
 	const reader = createReader(isFields ? (raw as Fields) : {}, problems);
-	const texts = { provider: reader.text("provider"), model: reader.text("model"), language: reader.text("language"), focus: reader.text("focus"), reasoning: reader.text("reasoning") };
+	const texts = { provider: reader.text("provider"), model: reader.text("model"), language: reader.text("language"), focus: reader.text("focus"), reasoning: reader.text("reasoning"), pageDirectory: reader.text("pageDirectory") };
 	const config: TimelineConfig = {
 		provider: texts.provider,
 		model: texts.model,
@@ -94,6 +99,8 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 		maxOutputTokens: reader.count("maxOutputTokens"),
 		enabled: reader.flag("enabled", true),
 		notify: reader.flag("notify", true),
+		page: reader.flag("page", true),
+		pageDirectory: texts.pageDirectory ?? DEFAULT_PAGE_DIRECTORY,
 	};
 	return { config, problems };
 }
