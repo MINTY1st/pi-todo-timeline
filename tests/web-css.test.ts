@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { applyToDirectory, buildRule, patchCss } from "../src/web-css.ts";
-import { fakeFiles } from "./fixtures.ts";
+import { fakeFiles, native } from "./fixtures.ts";
 
 const START = "/* pi-todo-timeline:start */";
 const END = "/* pi-todo-timeline:end */";
@@ -39,9 +39,9 @@ test("パネルの規則を含む CSS にだけ足し、ほかの CSS には触�
 	const files = fakeFiles({ "/web/css/a.css": ORIGINAL, "/web/css/b.css": ".b{color:blue}", "/web/css/note.txt": ".extension-widget-panels{}" });
 	const outcome = applyToDirectory(files, "/web/css", RULE_50);
 	assert.deepEqual([outcome.ok, outcome.changed, outcome.unchanged], [true, ["a.css"], []]);
-	assert.equal(files.stored.get("/web/css/a.css"), ORIGINAL + block(RULE_50));
-	assert.equal(files.stored.get("/web/css/b.css"), ".b{color:blue}");
-	assert.deepEqual(files.writes, ["/web/css/a.css"]);
+	assert.equal(files.at("/web/css/a.css"), ORIGINAL + block(RULE_50));
+	assert.equal(files.at("/web/css/b.css"), ".b{color:blue}");
+	assert.deepEqual(files.writes, [native("/web/css/a.css")]);
 });
 
 test("2回目は何も書かず、外すと元の中身に戻る", () => {
@@ -52,7 +52,7 @@ test("2回目は何も書かず、外すと元の中身に戻る", () => {
 	assert.equal(files.writes.length, 1);
 	const removed = applyToDirectory(files, "/web/css", undefined);
 	assert.deepEqual(removed.changed, ["a.css"]);
-	assert.equal(files.stored.get("/web/css/a.css"), ORIGINAL);
+	assert.equal(files.at("/web/css/a.css"), ORIGINAL);
 });
 
 test("CSS の置き場が無いか、パネルの規則を含む CSS が無ければ、失敗として理由を返す", () => {

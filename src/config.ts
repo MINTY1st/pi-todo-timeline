@@ -118,9 +118,10 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 	return { config, problems };
 }
 
-export function configPath(environment: Record<string, string | undefined>): string {
+/** ホームは環境変数 HOME からではなく、呼ぶ側が os.homedir() で渡す（Windows には HOME が無い） */
+export function configPath(environment: Record<string, string | undefined>, homeDirectory: string): string {
 	if (environment.PI_TODO_TIMELINE_CONFIG) return environment.PI_TODO_TIMELINE_CONFIG;
-	const base = environment.XDG_CONFIG_HOME || join(environment.HOME ?? "", ".config");
+	const base = environment.XDG_CONFIG_HOME || join(homeDirectory, ".config");
 	return join(base, "pi-todo-timeline", "config.json");
 }
 

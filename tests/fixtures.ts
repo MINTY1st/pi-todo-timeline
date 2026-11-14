@@ -1,4 +1,5 @@
 // テストで使うセッションのエントリの組み立て
+import { basename, dirname, resolve, sep } from "node:path";
 import type { Report } from "../src/records.ts";
 import type { TaskView } from "../src/view.ts";
 
@@ -35,9 +36,14 @@ export const ESCAPE = String.fromCharCode(27);
 /** 色の指定を取り除いた行 */
 export const plain = (lines: readonly string[]): string[] => lines.map((line) => line.replaceAll(new RegExp(`${ESCAPE}\\[[0-9;]*m`, "g"), ""));
 
-/** メモリの上の偽のファイル。failure を入れると、書き込みがその例外で失敗する */
+/** "/a/b" と書いたパスを、実行している OS の区切りにする（Windows では "\\a\\b"）。テストを OS に依らず書くため */
+export const native = (path: string): string => path.split("/").join(sep);
+/** 絶対パスにしたもの（Windows ではドライブも付く）。本体が resolve を通す所の期待に使う */
+export const absolute = (path: string): string => resolve(native(path));
+
+/** メモリの上の偽のファイル。パスは "/a/b" の形で書いてよい。failure を入れると、書き込みがその例外で失敗する */
 export function fakeFiles(initial: Record<string, string> = {}) {
-	const stored = new Map(Object.entries(initial));
+	const stored = new Map(Object.entries(initial).map(([path, content]) => [native(path), content]));
 	const writes: string[] = [];
 	const files = {
 		stored,
@@ -46,9 +52,12 @@ export function fakeFiles(initial: Record<string, string> = {}) {
 		read: (path: string) => stored.get(path),
 		/** ディレクトリの直下のファイル名。1つも無ければ、ディレクトリが無いものとして undefined */
 		list: (directory: string) => {
-			const names = [...stored.keys()].filter((path) => path.startsWith(`${directory}/`) && !path.slice(directory.length + 1).includes("/")).map((path) => path.slice(directory.length + 1));
+			const names = [...stored.keys()].filter((path) => dirname(path) === native(directory)).map((path) => basename(path));
 			return names.length === 0 ? undefined : names.sort();
 		},
+		/** 中身を "/a/b" の形のパスで見る・置く */
+		at: (path: string) => stored.get(native(path)),
+		put: (path: string, content: string) => void stored.set(native(path), content),
 		write: (path: string, content: string) => {
 			if (files.failure !== undefined) throw files.failure;
 			writes.push(path);

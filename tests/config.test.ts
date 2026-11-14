@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { configPath, loadConfig, resolveConfig } from "../src/config.ts";
+import { native } from "./fixtures.ts";
 
 test("何も書かれていなければ既定値を使い、モデルは未設定のままにする", () => {
 	const { config, problems } = resolveConfig({});
@@ -76,9 +77,14 @@ test("設定がオブジェクトでなければ、既定値を使って知ら�
 });
 
 test("設定ファイルの場所は、専用の環境変数、XDG_CONFIG_HOME、ホームの順に決める", () => {
-	assert.equal(configPath({ PI_TODO_TIMELINE_CONFIG: "/x/custom.json", XDG_CONFIG_HOME: "/xdg", HOME: "/home/u" }), "/x/custom.json");
-	assert.equal(configPath({ XDG_CONFIG_HOME: "/xdg", HOME: "/home/u" }), "/xdg/pi-todo-timeline/config.json");
-	assert.equal(configPath({ HOME: "/home/u" }), "/home/u/.config/pi-todo-timeline/config.json");
+	assert.equal(configPath({ PI_TODO_TIMELINE_CONFIG: "/x/custom.json", XDG_CONFIG_HOME: "/xdg" }, "/home/u"), "/x/custom.json");
+	assert.equal(configPath({ XDG_CONFIG_HOME: "/xdg" }, "/home/u"), native("/xdg/pi-todo-timeline/config.json"));
+	assert.equal(configPath({}, "/home/u"), native("/home/u/.config/pi-todo-timeline/config.json"));
+});
+
+test("ホームは、環境変数 HOME ではなく渡されたディレクトリを使う（Windows には HOME が無い）。空の環境変数は無いものとして扱う", () => {
+	assert.equal(configPath({ HOME: "/ignored" }, "/users/u"), native("/users/u/.config/pi-todo-timeline/config.json"));
+	assert.equal(configPath({ PI_TODO_TIMELINE_CONFIG: "", XDG_CONFIG_HOME: "" }, "/users/u"), native("/users/u/.config/pi-todo-timeline/config.json"));
 });
 
 test("設定ファイルが無ければ既定値、壊れていれば既定値を使って知らせる", () => {

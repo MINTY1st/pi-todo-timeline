@@ -1,19 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activitySpan, excludeFromGit, pagePath, publishPage } from "../src/page.ts";
-import { custom, fakeFiles, ms, session } from "./fixtures.ts";
+import { absolute, custom, fakeFiles, ms, session } from "./fixtures.ts";
 
 const location = { cwd: "/work/app", directory: ".pi/timeline", sessionId: "01a1d8af-9c88-723c-8893-0ad7d50d7bea", startedAt: ms("10:00"), timeZone: "UTC" };
 
 test("ページは、作業ディレクトリの下に、セッションの開始日時と ID の先頭を名前にして置く", () => {
-	assert.equal(pagePath(location), "/work/app/.pi/timeline/1101-1000-01a1d8af.html");
-	assert.equal(pagePath({ ...location, directory: "/shared/pages" }), "/shared/pages/1101-1000-01a1d8af.html");
-	assert.equal(pagePath({ ...location, startedAt: null }), "/work/app/.pi/timeline/01a1d8af.html");
+	assert.equal(pagePath(location), absolute("/work/app/.pi/timeline/1101-1000-01a1d8af.html"));
+	assert.equal(pagePath({ ...location, directory: "/shared/pages" }), absolute("/shared/pages/1101-1000-01a1d8af.html"));
+	assert.equal(pagePath({ ...location, startedAt: null }), absolute("/work/app/.pi/timeline/01a1d8af.html"));
 });
 
 test("ID にパスの記号が混ざっていても、置き場の外には出ない", () => {
-	assert.equal(pagePath({ ...location, sessionId: "../../etc/x" }), "/work/app/.pi/timeline/1101-1000-etcx.html");
-	assert.equal(pagePath({ ...location, sessionId: "" }), "/work/app/.pi/timeline/1101-1000-session.html");
+	assert.equal(pagePath({ ...location, sessionId: "../../etc/x" }), absolute("/work/app/.pi/timeline/1101-1000-etcx.html"));
+	assert.equal(pagePath({ ...location, sessionId: "" }), absolute("/work/app/.pi/timeline/1101-1000-session.html"));
 });
 
 test("中身が変わったときだけ書き、同じなら書かない", () => {
@@ -28,7 +28,7 @@ test("中身が変わったときだけ書き、同じなら書かない", () =>
 test("git の作業ツリーなら、ページの置き場を追跡の対象から外す行を1回だけ足す", () => {
 	const files = fakeFiles({ "/work/app/.git/info/exclude": "# 手で書いた行\n*.log" });
 	assert.equal(excludeFromGit(files, "/work/app", ".pi/timeline"), true);
-	assert.equal(files.stored.get("/work/app/.git/info/exclude"), "# 手で書いた行\n*.log\n/.pi/timeline/\n");
+	assert.equal(files.at("/work/app/.git/info/exclude"), "# 手で書いた行\n*.log\n/.pi/timeline/\n");
 	assert.equal(excludeFromGit(files, "/work/app", ".pi/timeline"), false);
 	assert.equal(files.writes.length, 1);
 });
@@ -45,7 +45,7 @@ test("git の作業ツリーでないか、置き場が作業ディレクトリ�
 test("置き場が絶対パスでも、作業ディレクトリの中なら外す行を足す", () => {
 	const files = fakeFiles({ "/work/app/.git/info/exclude": "" });
 	assert.equal(excludeFromGit(files, "/work/app", "/work/app/out/pages"), true);
-	assert.equal(files.stored.get("/work/app/.git/info/exclude"), "/out/pages/\n");
+	assert.equal(files.at("/work/app/.git/info/exclude"), "/out/pages/\n");
 });
 
 test("活動の範囲は、発言やツールの結果の最初と最後の時刻。拡張の記録は数えない", () => {
