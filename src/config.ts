@@ -26,6 +26,8 @@ export interface TimelineConfig {
 	/** 入力欄の上に、色つきの文字のパネルを出す */
 	panel: boolean;
 	panelMaxTasks: number;
+	/** Pi Web のパネルの高さの上限を、画面の高さの何 % にするか（上書きのコマンドが使う） */
+	panelMaxHeightPercent: number;
 }
 
 export interface LoadedConfig {
@@ -51,6 +53,7 @@ const NUMBER_RULES = {
 	timeoutSeconds: { min: 5, max: 600, fallback: 120 },
 	maxOutputTokens: { min: 200, max: 16_000, fallback: 4000 },
 	panelMaxTasks: { min: 1, max: 50, fallback: 10 },
+	panelMaxHeightPercent: { min: 10, max: 90, fallback: 50 },
 } satisfies Record<string, NumberRule>;
 
 type Fields = Record<string, unknown>;
@@ -106,6 +109,7 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 		page: reader.flag("page", true),
 		panel: reader.flag("panel", true),
 		panelMaxTasks: reader.count("panelMaxTasks"),
+		panelMaxHeightPercent: reader.count("panelMaxHeightPercent"),
 		pageDirectory: texts.pageDirectory ?? DEFAULT_PAGE_DIRECTORY,
 	};
 	return { config, problems };

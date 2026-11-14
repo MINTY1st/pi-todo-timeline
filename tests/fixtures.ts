@@ -44,6 +44,11 @@ export function fakeFiles(initial: Record<string, string> = {}) {
 		writes,
 		failure: undefined as Error | undefined,
 		read: (path: string) => stored.get(path),
+		/** ディレクトリの直下のファイル名。1つも無ければ、ディレクトリが無いものとして undefined */
+		list: (directory: string) => {
+			const names = [...stored.keys()].filter((path) => path.startsWith(`${directory}/`) && !path.slice(directory.length + 1).includes("/")).map((path) => path.slice(directory.length + 1));
+			return names.length === 0 ? undefined : names.sort();
+		},
 		write: (path: string, content: string) => {
 			if (files.failure !== undefined) throw files.failure;
 			writes.push(path);
