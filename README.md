@@ -80,7 +80,7 @@ Also available: `maxItemChars`, `maxLineChars`, `maxOutputTokens`, `timeoutSecon
 
 ### Panel height in Pi Web
 
-Pi Web limits extension panels to 144px. The bundled command appends one marked rule to Pi Web's CSS to raise the limit, and removes it again:
+Pi Web limits extension panels to 144px. The bundled command appends one marked rule to Pi Web's CSS to raise the limit, and removes it again. It runs from a git install or a source checkout only; Node does not execute TypeScript files under `node_modules`, so an npm install cannot run it.
 
 ```sh
 node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts apply
@@ -95,6 +95,7 @@ Reload the browser without cache afterwards. Updating Pi Web removes the rule, s
 - A reply that is cut off or is not valid JSON is discarded, and the report is retried at a later turn. A reply that only breaks the size rules is repaired once.
 - Work shorter than the interval produces no report until you resume or run `/timeline now`.
 - A completed task cannot be reopened; it can only be deleted. Dependency cycles are not checked.
+- The panel height command is not available from an npm install.
 - Pages are written per session and never deleted. In a git working tree the directory is added to `.git/info/exclude`, except in worktrees and subdirectories of a repository.
 - On Windows, model calls and the Pi Web views have not been run; unit tests, loading, panels, the page, and the height command have.
 
