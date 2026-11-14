@@ -63,15 +63,26 @@ function refreshPanel(session: Session, context: HostContext, snapshot: Snapshot
 	const lines = renderPanel({ ...snapshot, ...clockOf(session), pagePath: page, maxTasks: config.panelMaxTasks });
 	const text = lines.length === 0 ? undefined : lines.join("\n");
 	if (text === session.panelText) return;
-	session.panelText = text;
 	context.ui.setWidget(PANEL_KEY, text === undefined ? undefined : lines, { placement: "aboveEditor" });
+	// 送れたときだけ覚える。送れなかったら、次の機会に送り直す
+	session.panelText = text;
 }
 
-/** ページとパネルを今の状態にし、ページの場所を返す */
+/**
+ * ページとパネルを今の状態にし、ページの場所を返す。
+ * 表示の更新なので、記録を読めない・画面に送れないといった失敗では例外にせず、レポートの作成を止めない。
+ * 閉じたセッションでは何もしない（消したパネルを出し直さないため）。
+ */
 export function refreshViews(session: Session, context: HostContext): string | undefined {
-	const snapshot = snapshotOf(context);
-	const page = refreshPage(session, context, snapshot);
-	refreshPanel(session, context, snapshot, page);
+	if (session.closed) return undefined;
+	let page: string | undefined;
+	try {
+		const snapshot = snapshotOf(context);
+		page = refreshPage(session, context, snapshot);
+		refreshPanel(session, context, snapshot, page);
+	} catch {
+		// 次のターンの終わりにまた試す
+	}
 	return page;
 }
 

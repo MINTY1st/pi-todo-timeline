@@ -42,19 +42,21 @@ function fakeScreen() {
 	const notices: string[] = [];
 	const widgets = new Map<string, string[]>();
 	const widgetCalls: Array<string[] | undefined> = [];
+	const failures = { widget: undefined as Error | undefined };
 	const ui = {
 		notify: (message: string) => void notices.push(message),
 		setWidget: (key: string, lines: string[] | undefined) => {
+			if (failures.widget !== undefined) throw failures.widget;
 			widgetCalls.push(lines);
 			if (lines === undefined) widgets.delete(key);
 			else widgets.set(key, lines);
 		},
 	};
-	return { notices, widgets, widgetCalls, ui };
+	return { notices, widgets, widgetCalls, failures, ui };
 }
 
 function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
-	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true };
+	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true, branchFailure: undefined as Error | undefined };
 	const handlers = new Map<string, Handler>();
 	const commands = new Map<string, { handler: Handler }>();
 	const branch: unknown[] = session();
@@ -70,7 +72,10 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 		get hasUI() { return state.hasUI; },
 		cwd: "/work",
 		sessionManager: {
-			getBranch: () => branch,
+			getBranch: () => {
+				if (state.branchFailure !== undefined) throw state.branchFailure;
+				return branch;
+			},
 			getSessionId: () => "01a1d8af-9c88-723c-8893-0ad7d50d7bea",
 			getHeader: () => ({ timestamp: at("10:00") }),
 			getSessionName: () => "同期の不具合",
@@ -86,6 +91,7 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 		notices: screen.notices,
 		panel: () => plain(screen.widgets.get("timeline") ?? []),
 		widgetCalls: screen.widgetCalls,
+		screenFailures: screen.failures,
 		sessionStart: () => handlers.get("session_start")?.({ type: "session_start" }, context),
 		stored: files.stored,
 		calls: model.calls,
@@ -421,4 +427,46 @@ test("パネルを切ってあるか、画面の無い実行なら、パネル�
 	headless.turnEnd();
 	await flush();
 	assert.deepEqual([...off.widgetCalls, ...headless.widgetCalls], []);
+});
+
+test("パネルを送れなくても、ターンの終わりとレポートの作成は止めず、できたレポートは知らせる", async () => {
+	const pi = setup();
+	pi.screenFailures.widget = new Error("画面に送れない");
+	assert.equal(pi.turnEnd(), undefined);
+	await flush();
+	assert.equal(pi.reports().length, 1);
+	assert.deepEqual(pi.notices, ["タイムライン 15分 10:00–10:03: 不具合を直した"]);
+	await pi.command();
+	assert.doesNotMatch(pi.notices.at(-1) ?? "", /作れませんでした/);
+});
+
+test("パネルを送れなかったときは、次の機会に送り直す", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	pi.screenFailures.widget = new Error("画面に送れない");
+	pi.turnEnd();
+	pi.screenFailures.widget = undefined;
+	pi.turnEnd();
+	await flush();
+	assert.equal(pi.panel()[1], "今   #1 不具合を直す（修正中）");
+});
+
+test("セッションの記録を読めなくても、ターンの終わりを例外にしない", async () => {
+	const pi = setup();
+	pi.state.branchFailure = new Error("記録を読めない");
+	assert.equal(pi.turnEnd(), undefined);
+	await flush();
+	assert.equal(pi.reports().length, 0);
+});
+
+test("セッションを閉じた後は、/timeline を実行しても、パネルを出し直さず、ページも書かない", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
+	pi.sessionStart();
+	pi.shutdown();
+	const writesBefore = pi.files.writes.length;
+	await pi.command();
+	assert.deepEqual(pi.panel(), []);
+	assert.deepEqual(pi.widgetCalls.at(-1), undefined);
+	assert.equal(pi.files.writes.length, writesBefore);
 });
