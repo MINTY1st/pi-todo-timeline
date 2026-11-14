@@ -1,6 +1,9 @@
 // pi への配線。ターンの終わりに期限を確かめ、/timeline で表示する
 import type { LoadedConfig } from "./config.ts";
 import { completeText, findTarget } from "./host.ts";
+import { renderPage } from "./html.ts";
+import { activitySpan, excludeFromGit, pagePath, publishPage } from "./page.ts";
+import type { FileAccess } from "./page.ts";
 import type { HostContext, TimelineHost } from "./host.ts";
 import type { ModelRequest } from "./prompt.ts";
 import { REPORT_ENTRY_TYPE, reportsFromBranch } from "./records.ts";
@@ -9,6 +12,7 @@ import { produceReports } from "./reporter.ts";
 import { periodLabel, renderTimeline, reportHead, tasksFromBranch } from "./view.ts";
 
 export interface ExtensionOptions {
+	files: FileAccess;
 	loadConfig(): LoadedConfig;
 	/** 設定ファイルの場所。未設定の案内に出す */
 	configLocation: string;
@@ -28,6 +32,9 @@ interface Session {
 	retryAfter: number;
 	lastError: string | undefined;
 	closed: boolean;
+	/** ページの置き場を git の追跡から外す処理を済ませたか */
+	excluded: boolean;
+	pageError: string | undefined;
 }
 
 const COMMAND_NAME = "timeline";
@@ -60,6 +67,34 @@ function announce(session: Session, context: HostContext, reports: readonly Repo
 	}
 }
 
+function writePage(session: Session, context: HostContext): string | undefined {
+	const { config } = settingsOf(session);
+	if (!config.page) return undefined;
+	const { files, timeZone } = session.options;
+	const manager = context.sessionManager;
+	const startedAt = Date.parse(manager.getHeader()?.timestamp ?? "");
+	const path = pagePath({ cwd: context.cwd, directory: config.pageDirectory, sessionId: manager.getSessionId(), startedAt: Number.isNaN(startedAt) ? null : startedAt, timeZone });
+	if (!session.excluded) excludeFromGit(files, context.cwd, config.pageDirectory);
+	session.excluded = true;
+	const entries = [...manager.getBranch()];
+	const span = activitySpan(entries);
+	const page = { title: manager.getSessionName?.(), tasks: tasksFromBranch(entries), reports: reportsFromBranch(entries), firstActivity: span.first, lastActivity: span.last, ...clockOf(session) };
+	publishPage(files, path, renderPage(page));
+	return path;
+}
+
+/** ページを今の状態に書き直し、その場所を返す。書けなくても、ほかの処理は止めない */
+function refreshPage(session: Session, context: HostContext): string | undefined {
+	try {
+		const path = writePage(session, context);
+		session.pageError = undefined;
+		return path;
+	} catch (error) {
+		session.pageError = messageOf(error);
+		return undefined;
+	}
+}
+
 async function produce(session: Session, context: HostContext, model: object, force: boolean): Promise<void> {
 	const { config } = settingsOf(session);
 	const controller = new AbortController();
@@ -72,6 +107,7 @@ async function produce(session: Session, context: HostContext, model: object, fo
 	const result = await produceReports({ entries: [...context.sessionManager.getBranch()], config, force }, dependencies, controller.signal);
 	if (session.closed || controller.signal.aborted) return;
 	for (const report of result.reports) session.host.appendEntry(REPORT_ENTRY_TYPE, report);
+	if (result.reports.length > 0) refreshPage(session, context);
 	recordOutcome(session, result.error);
 	if (config.notify) announce(session, context, result.reports);
 }
@@ -91,18 +127,21 @@ function start(session: Session, context: HostContext, force: boolean): Promise<
 
 /** ターンを待たせないよう、作り始めるだけで戻る */
 function onTurnEnd(session: Session, context: HostContext): undefined {
+	if (session.closed || !context.hasUI) return undefined;
+	refreshPage(session, context);
 	const busy = session.running !== undefined || session.options.now() < session.retryAfter;
-	if (session.closed || !context.hasUI || busy) return undefined;
-	void start(session, context, false);
+	if (!busy) void start(session, context, false);
 	return undefined;
 }
 
-function notesOf(session: Session, context: HostContext): string[] {
+function notesOf(session: Session, context: HostContext, page: string | undefined): string[] {
 	const { config, problems } = settingsOf(session);
 	const target = findTarget(config, context.modelRegistry, session.options.configLocation);
 	const blocked = "reason" in target ? [target.reason] : [];
 	const failed = session.lastError === undefined ? [] : [`直近のレポートは作れませんでした: ${session.lastError}`];
-	return [...problems, ...blocked, ...failed];
+	const located = page === undefined ? [] : [`ページ: ${page}`];
+	const unwritten = session.pageError === undefined ? [] : [`ページを書き出せませんでした: ${session.pageError}`];
+	return [...problems, ...blocked, ...failed, ...located, ...unwritten];
 }
 
 async function show(session: Session, argumentText: string, context: HostContext): Promise<void> {
@@ -111,8 +150,9 @@ async function show(session: Session, argumentText: string, context: HostContext
 		while (session.running !== undefined) await session.running;
 		await start(session, context, true);
 	}
+	const page = refreshPage(session, context);
 	const entries = [...context.sessionManager.getBranch()];
-	const view = { tasks: tasksFromBranch(entries), reports: reportsFromBranch(entries), ...clockOf(session), maxReports: MAX_LISTED_REPORTS, notes: notesOf(session, context) };
+	const view = { tasks: tasksFromBranch(entries), reports: reportsFromBranch(entries), ...clockOf(session), maxReports: MAX_LISTED_REPORTS, notes: notesOf(session, context, page) };
 	context.ui.notify(renderTimeline(view), "info");
 }
 
@@ -123,7 +163,7 @@ function close(session: Session): void {
 
 export function createExtension(options: ExtensionOptions): (host: TimelineHost) => void {
 	return (host) => {
-		const session: Session = { options, host, loaded: undefined, running: undefined, controller: undefined, retryAfter: 0, lastError: undefined, closed: false };
+		const session: Session = { options, host, loaded: undefined, running: undefined, controller: undefined, retryAfter: 0, lastError: undefined, closed: false, excluded: false, pageError: undefined };
 		host.on("turn_end", (_event, context) => onTurnEnd(session, context));
 		host.on("session_shutdown", () => close(session));
 		host.registerCommand(COMMAND_NAME, {

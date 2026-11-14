@@ -20,7 +20,13 @@ export interface ModelRegistryLike {
 
 export interface HostContext {
 	hasUI: boolean;
-	sessionManager: { getBranch(): Iterable<unknown> };
+	cwd: string;
+	sessionManager: {
+		getBranch(): Iterable<unknown>;
+		getSessionId(): string;
+		getHeader(): { timestamp?: string } | null | undefined;
+		getSessionName?(): string | undefined;
+	};
 	ui: { notify(message: string, type?: "info" | "warning" | "error"): void };
 	modelRegistry: ModelRegistryLike;
 }

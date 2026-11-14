@@ -3,10 +3,12 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { configPath, loadConfig } from "./src/config.ts";
 import { createExtension } from "./src/extension.ts";
+import { createFileAccess } from "./src/files.ts";
 
 const configLocation = configPath(process.env);
 
 export default createExtension({
+	files: createFileAccess(),
 	loadConfig: () => loadConfig(configLocation, (path) => readFileSync(path, "utf8")),
 	configLocation,
 	now: Date.now,

@@ -3,30 +3,29 @@ import assert from "node:assert/strict";
 import { resolveConfig } from "../src/config.ts";
 import { createExtension } from "../src/extension.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import { custom, ms, session, user } from "./fixtures.ts";
+import { at, custom, fakeFiles, ms, session, user } from "./fixtures.ts";
 
 type Handler = (...values: unknown[]) => unknown;
 const answer = (first: string) => ({ role: "assistant", stopReason: "stop", content: [{ type: "text", text: JSON.stringify({ progress: [first], uncertainties: [], userActions: [] }) }] });
 const flush = () => new Promise((resolve) => setImmediate(resolve));
+const PAGE_PATH = "/work/.pi/timeline/1101-1000-01a1d8af.html";
 
-function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
-	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true };
-	const handlers = new Map<string, Handler>();
-	const commands = new Map<string, { handler: Handler }>();
-	const branch: unknown[] = session();
-	const notices: string[] = [];
-	const calls: Array<{ model: unknown; context: { systemPrompt: string; messages: Array<{ content: Array<{ text: string }> }> }; options: { signal: AbortSignal; maxTokens: number; reasoning?: string } }> = [];
+type ModelCall = { model: unknown; context: { systemPrompt: string; messages: Array<{ content: Array<{ text: string }> }> }; options: { signal: AbortSignal; maxTokens: number; reasoning?: string } };
+
+/** 偽のモデルの登録簿。返答は差し替えられ、保留にもできる */
+function fakeRegistry(state: { modelFound: boolean; hasAuth: boolean }) {
+	const calls: ModelCall[] = [];
 	let respond: (call: number) => Promise<unknown> = async () => answer("不具合を直した");
-	const host = {
-		on: (event: string, handler: Handler) => void handlers.set(event, handler),
-		registerCommand: (name: string, options: { handler: Handler }) => void commands.set(name, options),
-		appendEntry: (customType: string, data: unknown) => void branch.push(custom("10:15", customType, data)),
-	};
-	const context = {
-		get hasUI() { return state.hasUI; },
-		sessionManager: { getBranch: () => branch },
-		ui: { notify: (message: string) => void notices.push(message) },
-		modelRegistry: {
+	return {
+		calls,
+		setRespond: (next: typeof respond) => { respond = next; },
+		/** モデルの返答を、返された関数を呼ぶまで保留にする */
+		holdResponse: () => {
+			let release: (value: unknown) => void = () => {};
+			respond = () => new Promise((resolve) => { release = resolve; });
+			return (value: unknown) => release(value);
+		},
+		registry: {
 			find: (provider: string, modelId: string) => (state.modelFound ? { provider, modelId } : undefined),
 			hasConfiguredAuth: () => state.hasAuth,
 			streamSimple: (model: unknown, modelContext: never, options: never) => {
@@ -36,18 +35,42 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 			},
 		},
 	};
+}
+
+function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
+	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true };
+	const handlers = new Map<string, Handler>();
+	const commands = new Map<string, { handler: Handler }>();
+	const branch: unknown[] = session();
+	const notices: string[] = [];
+	const files = fakeFiles();
+	const model = fakeRegistry(state);
+	const host = {
+		on: (event: string, handler: Handler) => void handlers.set(event, handler),
+		registerCommand: (name: string, options: { handler: Handler }) => void commands.set(name, options),
+		appendEntry: (customType: string, data: unknown) => void branch.push(custom("10:15", customType, data)),
+	};
+	const context = {
+		get hasUI() { return state.hasUI; },
+		cwd: "/work",
+		sessionManager: {
+			getBranch: () => branch,
+			getSessionId: () => "01a1d8af-9c88-723c-8893-0ad7d50d7bea",
+			getHeader: () => ({ timestamp: at("10:00") }),
+			getSessionName: () => "同期の不具合",
+		},
+		ui: { notify: (message: string) => void notices.push(message) },
+		modelRegistry: model.registry,
+	};
 	let serial = 0;
-	createExtension({ loadConfig: () => resolveConfig(rawConfig), configLocation: "/c/config.json", now: () => state.now, newId: () => `new${++serial}`, timeZone: "UTC" })(host as never);
+	createExtension({ files, loadConfig: () => resolveConfig(rawConfig), configLocation: "/c/config.json", now: () => state.now, newId: () => `new${++serial}`, timeZone: "UTC" })(host as never);
 	const reports = () => branch.filter((entry) => (entry as { customType?: string }).customType === REPORT_ENTRY_TYPE);
 	return {
-		state, branch, notices, calls, reports,
-		setRespond: (next: typeof respond) => { respond = next; },
-		/** モデルの返答を、返された関数を呼ぶまで保留にする */
-		holdResponse: () => {
-			let release: (value: unknown) => void = () => {};
-			respond = () => new Promise((resolve) => { release = resolve; });
-			return (value: unknown) => release(value);
-		},
+		state, branch, notices, reports, files,
+		stored: files.stored,
+		calls: model.calls,
+		setRespond: model.setRespond,
+		holdResponse: model.holdResponse,
 		turnEnd: () => handlers.get("turn_end")?.({ type: "turn_end" }, context),
 		shutdown: () => handlers.get("session_shutdown")?.({ type: "session_shutdown" }, context),
 		command: (argumentText = "") => commands.get("timeline")?.handler(argumentText, context),
@@ -205,7 +228,55 @@ test("/timeline は、タスクとレポートをまとめて表示する", asyn
 		"レポート",
 		"  15分 10:00–10:03（ツール 1 回）",
 		"    ・不具合を直した",
+		"",
+		`ページ: ${PAGE_PATH}`,
 	]);
+});
+
+test("ターンの終わりごとに、タスクとレポートのページをセッションごとのファイルに書き出す", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.turnEnd();
+	await flush();
+	const page = pi.stored.get(PAGE_PATH) ?? "";
+	assert.match(page, /<h1>タイムライン<\/h1><div class="sub">同期の不具合<\/div>/);
+	assert.match(page, /タスクはまだありません/);
+	assert.match(page, /レポートはまだありません/);
+	assert.match(page, /記録の最後 10:03/);
+});
+
+test("レポートができたら、それを入れてページを書き直す", async () => {
+	const pi = setup();
+	pi.turnEnd();
+	await flush();
+	assert.match(pi.stored.get(PAGE_PATH) ?? "", /<div class="lead">不具合を直した<\/div>/);
+});
+
+test("ページを切ってあれば書き出さず、/timeline にも場所を添えない", async () => {
+	const pi = setup({ provider: "p", model: "m", page: false });
+	pi.turnEnd();
+	await flush();
+	await pi.command();
+	assert.equal(pi.stored.size, 0);
+	assert.doesNotMatch(pi.notices.at(-1) ?? "", /ページ/);
+});
+
+test("ページを書き出せなくても、レポートは作り、/timeline で理由を示す", async () => {
+	const pi = setup();
+	pi.files.failure = new Error("書き込めない場所");
+	assert.equal(pi.turnEnd(), undefined);
+	await flush();
+	assert.equal(pi.reports().length, 1);
+	await pi.command();
+	assert.match(pi.notices.at(-1) ?? "", /ページを書き出せませんでした: 書き込めない場所/);
+});
+
+test("作業ディレクトリが git の作業ツリーなら、ページの置き場を追跡の対象から外す", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.stored.set("/work/.git/info/exclude", "*.log\n");
+	pi.turnEnd();
+	pi.turnEnd();
+	await flush();
+	assert.equal(pi.stored.get("/work/.git/info/exclude"), "*.log\n/.pi/timeline/\n");
 });
 
 test("/timeline now は、期限の前でもレポートを作ってから表示する", async () => {

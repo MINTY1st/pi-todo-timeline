@@ -17,6 +17,24 @@ export const toolResult = (clock: string, toolName: string, output: string, isEr
 });
 export const custom = (clock: string, customType: string, data: unknown) => ({ ...base(clock), type: "custom", customType, data });
 
+/** メモリの上の偽のファイル。failure を入れると、書き込みがその例外で失敗する */
+export function fakeFiles(initial: Record<string, string> = {}) {
+	const stored = new Map(Object.entries(initial));
+	const writes: string[] = [];
+	const files = {
+		stored,
+		writes,
+		failure: undefined as Error | undefined,
+		read: (path: string) => stored.get(path),
+		write: (path: string, content: string) => {
+			if (files.failure !== undefined) throw files.failure;
+			writes.push(path);
+			stored.set(path, content);
+		},
+	};
+	return files;
+}
+
 /** 10:00 に頼まれ、テストを1回実行し、10:03 に直し終えたセッション */
 export const session = () => [
 	user("10:00", "同期の不具合を直して"),

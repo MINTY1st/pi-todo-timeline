@@ -1,21 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activitySpan, excludeFromGit, pagePath, publishPage } from "../src/page.ts";
-import { custom, ms, session } from "./fixtures.ts";
+import { custom, fakeFiles, ms, session } from "./fixtures.ts";
 
-function fakeFiles(initial: Record<string, string> = {}) {
-	const stored = new Map(Object.entries(initial));
-	const writes: string[] = [];
-	return {
-		stored,
-		writes,
-		read: (path: string) => stored.get(path),
-		write: (path: string, content: string) => {
-			writes.push(path);
-			stored.set(path, content);
-		},
-	};
-}
 const location = { cwd: "/work/app", directory: ".pi/timeline", sessionId: "01a1d8af-9c88-723c-8893-0ad7d50d7bea", startedAt: ms("10:00"), timeZone: "UTC" };
 
 test("ページは、作業ディレクトリの下に、セッションの開始日時と ID の先頭を名前にして置く", () => {
