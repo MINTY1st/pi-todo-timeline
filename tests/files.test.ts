@@ -30,6 +30,19 @@ test("途中がファイルで辿れない場所（git の worktree の .git な
 	}
 });
 
+test("ディレクトリの直下のファイル名を返す。ディレクトリが無ければ undefined", () => {
+	const root = mkdtempSync(join(tmpdir(), "pi-timeline-"));
+	try {
+		const files = createFileAccess();
+		assert.equal(files.list(join(root, "none")), undefined);
+		files.write(join(root, "css", "b.css"), "b");
+		files.write(join(root, "css", "a.css"), "a");
+		assert.deepEqual(files.list(join(root, "css")), ["a.css", "b.css"]);
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
 test("読めない理由が「無い」以外なら、例外にする", () => {
 	const root = mkdtempSync(join(tmpdir(), "pi-timeline-"));
 	try {

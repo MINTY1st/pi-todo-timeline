@@ -41,6 +41,14 @@ test("パネルは既定で出し、並べるタスクは10件まで。切るこ
 	assert.deepEqual([custom.panel, custom.panelMaxTasks], [false, 5]);
 });
 
+test("パネルの高さの上限は画面の半分。10〜90% の範囲で変えられる", () => {
+	assert.equal(resolveConfig({}).config.panelMaxHeightPercent, 50);
+	assert.equal(resolveConfig({ panelMaxHeightPercent: 70 }).config.panelMaxHeightPercent, 70);
+	const tooTall = resolveConfig({ panelMaxHeightPercent: 100 });
+	assert.equal(tooTall.config.panelMaxHeightPercent, 50);
+	assert.match(tooTall.problems[0], /^panelMaxHeightPercent は 10〜90/);
+});
+
 test("思考の強さは書かれていればそのまま使い、無ければ指定しない", () => {
 	assert.equal(resolveConfig({}).config.reasoning, undefined);
 	assert.equal(resolveConfig({ reasoning: "low" }).config.reasoning, "low");

@@ -48,6 +48,32 @@ pi install git:github.com/MINTY1st/pi-todo-timeline
 - タスクもレポートも無い間は出さない。セッションを閉じると消す
 - タスク名やレポートの文に混ざった制御文字は取り除く
 
+### パネルの高さ（Pi Web）
+
+Pi Web は、拡張のパネルの高さを 144px（画面が低ければ画面の高さの18%）までに決めていて、はみ出た分は縦にスクロールする。拡張の側からは変えられないので、Pi Web の CSS に上書きを足すコマンドを同梱している。
+
+```bash
+# 足す（高さの上限を、設定の panelMaxHeightPercent にする。既定は画面の高さの 50%）
+node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts apply
+# 外す
+node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts remove
+```
+
+実行したら、ブラウザでキャッシュを使わない再読み込み（Ctrl+Shift+R）をする。Pi Web の再起動は要らない。
+
+- Pi Web の配布物のうち、パネルの規則（`.extension-widget-panels`）を含む CSS のファイルの末尾に、目印つきで1行足すだけ。ほかのファイルには触らない。何度実行しても同じ結果になり、`remove` で元の中身に戻る
+- 上限なので、中身が短ければパネルもその高さになる
+- 設定の値を変えたら、もう一度 `apply` する
+- Pi Web を更新すると消える。systemd で動かしているなら、起動の前に当て直すようにしておける（先頭の `-` は、失敗しても起動を止めない指定）
+
+  ```ini
+  [Service]
+  ExecStartPre=-/usr/bin/env node %h/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts apply
+  ```
+
+- Pi Web の場所は、`--dir`、環境変数 `PI_WEB_DIR`、実行している node の隣の `lib/node_modules/@agegr/pi-web` の順に決める
+- Pi Web がパネルの作りを変えると効かなくなる。そのときは「含む CSS がありません」と出て失敗する
+
 ### ページ
 
 タスクとレポートを、セッションごとに1枚の HTML に書き出す。置き場は `<作業ディレクトリ>/.pi/timeline/<開始の月日>-<時分>-<セッション ID の先頭8桁>.html`。`/timeline` を実行すると、末尾に場所が出る。
@@ -115,6 +141,7 @@ pi install git:github.com/MINTY1st/pi-todo-timeline
 | `notify` | レポートができたら通知する | `true` |
 | `panel` | 入力欄の上にパネルを出す | `true` |
 | `panelMaxTasks` | パネルに並べるタスクの上限（1〜50） | `10` |
+| `panelMaxHeightPercent` | Pi Web のパネルの高さの上限。画面の高さに対する %（10〜90）。上のコマンドが使う | `50` |
 | `page` | HTML のページを書き出す | `true` |
 | `pageDirectory` | ページの置き場。相対パスなら作業ディレクトリから | `.pi/timeline` |
 

@@ -1,17 +1,29 @@
 // 実際のファイルの読み書き
-import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { FileAccess } from "./page.ts";
 
-export function createFileAccess(): FileAccess {
+const isMissing = (error: unknown): boolean => {
+	// ENOTDIR は、途中がファイルで辿れないとき（git の worktree では .git がファイル）
+	const code = (error as { code?: string }).code;
+	return code === "ENOENT" || code === "ENOTDIR";
+};
+
+export function createFileAccess(): FileAccess & { list(directory: string): string[] | undefined } {
 	return {
+		list(directory) {
+			try {
+				return readdirSync(directory).sort();
+			} catch (error) {
+				if (isMissing(error)) return undefined;
+				throw error;
+			}
+		},
 		read(path) {
 			try {
 				return readFileSync(path, "utf8");
 			} catch (error) {
-				// ENOTDIR は、途中がファイルで辿れないとき（git の worktree では .git がファイル）
-				const code = (error as { code?: string }).code;
-				if (code === "ENOENT" || code === "ENOTDIR") return undefined;
+				if (isMissing(error)) return undefined;
 				throw error;
 			}
 		},
