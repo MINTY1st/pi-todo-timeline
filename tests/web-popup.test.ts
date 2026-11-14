@@ -50,11 +50,23 @@ test("差し込むスクリプトは単独で構文として成り立ち、失�
 	assert.doesNotMatch(script, /https?:\/\//, "外の資源を読み込まない");
 });
 
-test("ページに、開く面と配色の指定を入れる。指定を入れる場所が無い HTML はそのまま返す", () => {
-	const page = '<!DOCTYPE html><html lang="ja"><head></head><body></body></html>';
-	assert.equal(withPageOptions(page, { tab: "reports", theme: "dark" }), '<!DOCTYPE html><html lang="ja" data-tab="reports" data-theme="dark"><head></head><body></body></html>');
-	assert.equal(withPageOptions(page, { tab: "tasks", theme: "" }), '<!DOCTYPE html><html lang="ja" data-tab="tasks"><head></head><body></body></html>');
-	assert.equal(withPageOptions("<html><body></body></html>", { tab: "reports", theme: "dark" }), "<html><body></body></html>");
+const PAGE = '<!DOCTYPE html><html lang="ja"><head></head><body></body></html>';
+const opened = (attributes: string) => `<!DOCTYPE html><html lang="ja"${attributes}><head></head><body></body></html>`;
+
+test("ページに、開く面と、Pi Web の今の配色の色を入れる。色はページの変数を上書きする形で渡す", () => {
+	const colors = { "--bg": "#19201f", "--panel": "#212b28", "--accent": "#acccb7" };
+	assert.equal(withPageOptions(PAGE, { tab: "reports", scheme: "dark", colors }), opened(' data-tab="reports" data-theme="dark" style="--bg:#19201f;--panel:#212b28;--accent:#acccb7;color-scheme:dark"'));
+	assert.equal(withPageOptions(PAGE, { tab: "tasks", scheme: "light", colors: { "--bg": " #faf6ee " } }), opened(' data-tab="tasks" data-theme="light" style="--bg:#faf6ee;color-scheme:light"'));
+});
+
+test("配色が分からなければ色は入れず、開く面だけを入れる。指定を入れる場所が無い HTML はそのまま返す", () => {
+	assert.equal(withPageOptions(PAGE, { tab: "tasks", scheme: "", colors: {} }), opened(' data-tab="tasks"'));
+	assert.equal(withPageOptions("<html><body></body></html>", { tab: "reports", scheme: "dark", colors: { "--bg": "#000" } }), "<html><body></body></html>");
+});
+
+test("色として読めない値や、属性の外に出られる値は捨てる。開く面は決まった2つだけを受け取る", () => {
+	const colors = { "--bg": 'red" onload="x', "--text": "#fff;background:url(x)", "--panel": "url(x)", "bad name": "#000", "--line": "rgb(1, 2, 3)", "--muted": "" };
+	assert.equal(withPageOptions(PAGE, { tab: 'x" onload="y', scheme: 'dark" x="', colors }), opened(' data-tab="tasks" style="--line:rgb(1, 2, 3)"'));
 });
 
 test("スクリプトを動かすと、押下の見張りだけを始める。キーは見張らない（Pi Web では Esc が実行の中断なので、巻き込まないため）", () => {

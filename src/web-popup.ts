@@ -11,6 +11,8 @@ const SETTINGS = {
 	/** ページの置き場（作業ディレクトリから）。設定の pageDirectory を変えていると見つからない */
 	pageDirectory: ".pi/timeline",
 	refreshMs: 4000,
+	/** ページの色の変数と、その元にする Pi Web の色の変数。Pi Web のどの配色でも、その場の値を読んで合わせる */
+	colors: { "--bg": "--bg", "--panel": "--bg-panel", "--line": "--border", "--text": "--text", "--muted": "--text-muted", "--dim": "--text-dim", "--accent": "--accent", "--done": "--ansi-green", "--warn": "--ansi-yellow", "--act": "--ansi-cyan" } as Record<string, string>,
 	boxStyle: "position:fixed;right:16px;bottom:52px;width:min(460px,calc(100vw - 24px));height:min(72vh,760px);z-index:2147483000;border:1px solid var(--border,#454545);border-radius:12px;overflow:hidden;background:var(--bg,#1a1a1a);box-shadow:0 16px 48px rgba(0,0,0,.5);display:none",
 	frameStyle: "width:100%;height:100%;border:0;display:block",
 	closeStyle: "position:absolute;top:8px;right:10px;width:26px;height:26px;border:0;border-radius:6px;background:var(--bg-hover,#2e2e2e);color:var(--text,#e8e8e8);font-size:16px;line-height:1;cursor:pointer",
@@ -53,17 +55,35 @@ export function tabForClick(event: { shiftKey: boolean; target: unknown }): Tab 
 	return Object.prototype.hasOwnProperty.call(SETTINGS.tabs, key) ? SETTINGS.tabs[key] : undefined;
 }
 
-/** ページの html の要素に、開く面と配色の指定を足す。ページの側のスクリプトとスタイルがこれを見る */
-export function withPageOptions(html: string, options: { tab: string; theme: string }): string {
-	const theme = options.theme === "" ? "" : ` data-theme="${options.theme}"`;
-	return html.replace('<html lang="ja">', `<html lang="ja" data-tab="${options.tab}"${theme}>`);
+/** 色の変数の上書きを、style の属性の中身にする。色として読めない値や、属性の外に出られる値は捨てる */
+function pageStyle(colors: Record<string, string>, scheme: string): string {
+	const isColor = (value: string): boolean => /^[#(),.%\w\s-]+$/.test(value) && !/url/i.test(value);
+	const declarations = Object.keys(colors)
+		.filter((name) => /^--[a-z-]+$/.test(name) && isColor(colors[name].trim()))
+		.map((name) => `${name}:${colors[name].trim()}`);
+	if (scheme !== "") declarations.push(`color-scheme:${scheme}`);
+	return declarations.join(";");
 }
 
-/** Pi Web の今の配色。分からなければ空（ページは OS の設定に従う） */
-function themeOf(view: Window): string {
-	const scheme = view.getComputedStyle(view.document.documentElement).colorScheme || "";
-	if (scheme.includes("dark")) return "dark";
-	return scheme.includes("light") ? "light" : "";
+/** ページの html の要素に、開く面と配色の指定を足す。ページの側のスクリプトとスタイルがこれを見る */
+export function withPageOptions(html: string, options: { tab: string; scheme: string; colors: Record<string, string> }): string {
+	const tab = options.tab === "reports" ? "reports" : "tasks";
+	const scheme = options.scheme === "dark" || options.scheme === "light" ? options.scheme : "";
+	const style = pageStyle(options.colors, scheme);
+	const attributes = [` data-tab="${tab}"`, scheme === "" ? "" : ` data-theme="${scheme}"`, style === "" ? "" : ` style="${style}"`];
+	return html.replace('<html lang="ja">', `<html lang="ja"${attributes.join("")}>`);
+}
+
+/** Pi Web の今の配色。明暗と、ページの色の変数に入れる値 */
+function themeOf(view: Window): { scheme: string; colors: Record<string, string> } {
+	const computed = view.getComputedStyle(view.document.documentElement);
+	const colors: Record<string, string> = {};
+	for (const name of Object.keys(SETTINGS.colors)) {
+		const value = computed.getPropertyValue(SETTINGS.colors[name]).trim();
+		if (value !== "") colors[name] = value;
+	}
+	const declared = computed.colorScheme || "";
+	return { scheme: declared.includes("dark") ? "dark" : declared.includes("light") ? "light" : "", colors };
 }
 
 async function getJson(view: Window, url: string): Promise<Record<string, any>> {
@@ -102,7 +122,7 @@ async function pageVersion(view: Window, path: string): Promise<string> {
 
 function messageDocument(text: string): string {
 	const safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-	return `<!DOCTYPE html><html lang="ja"><body style="margin:0;padding:48px 20px;font:14px/1.6 system-ui,sans-serif;color:#a9a9b2;background:#1b1b1d">${safe}</body></html>`;
+	return `<!DOCTYPE html><html lang="ja"><body style="margin:0;padding:48px 20px;font:14px/1.6 system-ui,sans-serif;color:var(--muted,#a9a9b2);background:var(--bg,#1b1b1d)">${safe}</body></html>`;
 }
 
 /** 小窓の枠を返す。無ければ作る。中のページは、Pi Web のプレビューと同じ制限つきの枠に描く */
@@ -134,7 +154,7 @@ function closePopup(view: Window, state: PopupState): void {
 	state.tab = undefined;
 }
 
-/** ページが変わっていれば読み直して描く。セッションが変わっていれば、場所から調べ直す */
+/** ページか Pi Web の配色が変わっていれば、読み直して描く。セッションが変わっていれば、場所から調べ直す */
 async function loadInto(view: Window, state: PopupState, frame: HTMLIFrameElement): Promise<void> {
 	const sessionId = sessionIdFrom(view.location.search);
 	if (sessionId === "") throw new Error("セッションが選ばれていません");
@@ -143,12 +163,13 @@ async function loadInto(view: Window, state: PopupState, frame: HTMLIFrameElemen
 		state.sessionId = sessionId;
 		state.version = "";
 	}
-	const version = await pageVersion(view, state.path);
+	const theme = themeOf(view);
+	const version = `${await pageVersion(view, state.path)}|${JSON.stringify(theme)}`;
 	if (version === state.version) return;
 	const html = await readPage(view, state.path);
 	state.version = version;
 	state.shown = "";
-	frame.srcdoc = withPageOptions(html, { tab: state.tab ?? "tasks", theme: themeOf(view) });
+	frame.srcdoc = withPageOptions(html, { tab: state.tab ?? "tasks", scheme: theme.scheme, colors: theme.colors });
 }
 
 function openPopup(view: Window, state: PopupState, tab: Tab): void {
@@ -162,7 +183,7 @@ function openPopup(view: Window, state: PopupState, tab: Tab): void {
 			state.path = "";
 			if (state.shown === text) return;
 			state.shown = text;
-			frame.srcdoc = messageDocument(text);
+			frame.srcdoc = withPageOptions(messageDocument(text), { tab: "tasks", ...themeOf(view) });
 		});
 	};
 	update();
@@ -186,7 +207,7 @@ export function installPopup(view: Window): void {
 	}, true);
 }
 
-const EMBEDDED = [sessionIdFrom, apiPath, pageNameFor, tabForClick, withPageOptions, themeOf, getJson, findPage, readPage, pageVersion, messageDocument, ensureBox, closePopup, loadInto, openPopup, installPopup];
+const EMBEDDED = [sessionIdFrom, apiPath, pageNameFor, tabForClick, pageStyle, withPageOptions, themeOf, getJson, findPage, readPage, pageVersion, messageDocument, ensureBox, closePopup, loadInto, openPopup, installPopup];
 const LAYOUT_NAME = /^layout-[^.]+\.js$/;
 const CHUNK_PREFIX = "(self.webpackChunk_N_E";
 
