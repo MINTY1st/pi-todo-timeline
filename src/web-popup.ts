@@ -11,7 +11,6 @@ const SETTINGS = {
 	/** ページの置き場（作業ディレクトリから）。設定の pageDirectory を変えていると見つからない */
 	pageDirectory: ".pi/timeline",
 	refreshMs: 4000,
-	namePrefix: "pi-timeline:",
 	boxStyle: "position:fixed;right:16px;bottom:52px;width:min(460px,calc(100vw - 24px));height:min(72vh,760px);z-index:2147483000;border:1px solid var(--border,#454545);border-radius:12px;overflow:hidden;background:var(--bg,#1a1a1a);box-shadow:0 16px 48px rgba(0,0,0,.5);display:none",
 	frameStyle: "width:100%;height:100%;border:0;display:block",
 	closeStyle: "position:absolute;top:8px;right:10px;width:26px;height:26px;border:0;border-radius:6px;background:var(--bg-hover,#2e2e2e);color:var(--text,#e8e8e8);font-size:16px;line-height:1;cursor:pointer",
@@ -52,6 +51,19 @@ export function tabForClick(event: { shiftKey: boolean; target: unknown }): Tab 
 	const label = trigger ? trigger.querySelector(SETTINGS.key) : null;
 	const key = label && label.textContent ? label.textContent.trim() : "";
 	return Object.prototype.hasOwnProperty.call(SETTINGS.tabs, key) ? SETTINGS.tabs[key] : undefined;
+}
+
+/** ページの html の要素に、開く面と配色の指定を足す。ページの側のスクリプトとスタイルがこれを見る */
+export function withPageOptions(html: string, options: { tab: string; theme: string }): string {
+	const theme = options.theme === "" ? "" : ` data-theme="${options.theme}"`;
+	return html.replace('<html lang="ja">', `<html lang="ja" data-tab="${options.tab}"${theme}>`);
+}
+
+/** Pi Web の今の配色。分からなければ空（ページは OS の設定に従う） */
+function themeOf(view: Window): string {
+	const scheme = view.getComputedStyle(view.document.documentElement).colorScheme || "";
+	if (scheme.includes("dark")) return "dark";
+	return scheme.includes("light") ? "light" : "";
 }
 
 async function getJson(view: Window, url: string): Promise<Record<string, any>> {
@@ -136,15 +148,13 @@ async function loadInto(view: Window, state: PopupState, frame: HTMLIFrameElemen
 	const html = await readPage(view, state.path);
 	state.version = version;
 	state.shown = "";
-	frame.srcdoc = html;
+	frame.srcdoc = withPageOptions(html, { tab: state.tab ?? "tasks", theme: themeOf(view) });
 }
 
 function openPopup(view: Window, state: PopupState, tab: Tab): void {
 	const { box, frame } = ensureBox(view, () => closePopup(view, state));
 	state.tab = tab;
 	state.version = "";
-	// ページの側は、枠の名前を見て開く面を決める
-	frame.name = SETTINGS.namePrefix + tab;
 	box.style.display = "block";
 	const update = (): void => {
 		loadInto(view, state, frame).catch((error: unknown) => {
@@ -160,7 +170,10 @@ function openPopup(view: Window, state: PopupState, tab: Tab): void {
 	state.timer = view.setInterval(update, SETTINGS.refreshMs);
 }
 
-/** timeline と reports のボタンの押下を小窓に回す。同じボタンをもう一度押すか、Esc で閉じる */
+/**
+ * timeline と reports のボタンの押下を小窓に回す。同じボタンをもう一度押すか、× で閉じる。
+ * キーは見張らない。Pi Web では Esc が実行の中断なので、小窓を閉じるつもりの Esc が作業を止めてしまう。
+ */
 export function installPopup(view: Window): void {
 	const state: PopupState = { tab: undefined, sessionId: "", path: "", version: "", shown: "", timer: 0 };
 	view.document.addEventListener("click", (event) => {
@@ -171,12 +184,9 @@ export function installPopup(view: Window): void {
 		if (state.tab === tab) closePopup(view, state);
 		else openPopup(view, state, tab);
 	}, true);
-	view.document.addEventListener("keydown", (event) => {
-		if (event.key === "Escape" && state.tab !== undefined) closePopup(view, state);
-	}, true);
 }
 
-const EMBEDDED = [sessionIdFrom, apiPath, pageNameFor, tabForClick, getJson, findPage, readPage, pageVersion, messageDocument, ensureBox, closePopup, loadInto, openPopup, installPopup];
+const EMBEDDED = [sessionIdFrom, apiPath, pageNameFor, tabForClick, withPageOptions, themeOf, getJson, findPage, readPage, pageVersion, messageDocument, ensureBox, closePopup, loadInto, openPopup, installPopup];
 const LAYOUT_NAME = /^layout-[^.]+\.js$/;
 const CHUNK_PREFIX = "(self.webpackChunk_N_E";
 

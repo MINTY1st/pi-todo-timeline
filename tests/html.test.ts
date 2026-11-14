@@ -91,6 +91,14 @@ test("今日でない日のレポートには月日を付け、記録の最後�
 	assert.match(renderPage(input()), /記録の最後 10:45/);
 });
 
+test("開く面と配色は、外から html の要素の属性で指定できる（小窓が使う）", () => {
+	const page = renderPage(input());
+	assert.match(page, /getAttribute\("data-tab"\)/);
+	assert.match(page, /html\[data-theme=dark\]/);
+	assert.match(page, /html\[data-theme=light\]/);
+	assert.ok(page.includes('<html lang="ja">'), "小窓のスクリプトが属性を足す場所");
+});
+
 test("1枚で完結した HTML として出す", () => {
 	const page = renderPage(input());
 	assert.match(page, /^<!DOCTYPE html>/);

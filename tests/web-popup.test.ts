@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { apiPath, buildPopupScript, isLayoutChunk, pageNameFor, sessionIdFrom, tabForClick } from "../src/web-popup.ts";
+import { apiPath, buildPopupScript, isLayoutChunk, pageNameFor, sessionIdFrom, tabForClick, withPageOptions } from "../src/web-popup.ts";
 import { applyPatch } from "../src/web-patch.ts";
 import { fakeFiles, native } from "./fixtures.ts";
 
@@ -46,15 +46,23 @@ test("差し込むスクリプトは単独で構文として成り立ち、失�
 	assert.ok(script.startsWith(";(function () {\ntry {"));
 	assert.ok(script.trimEnd().endsWith("})();"));
 	assert.match(script, /\} catch \(/);
-	for (const name of ["sessionIdFrom", "apiPath", "pageNameFor", "tabForClick", "installPopup"]) assert.ok(script.includes(`var ${name} = function`), name);
+	for (const name of ["sessionIdFrom", "apiPath", "pageNameFor", "tabForClick", "withPageOptions", "installPopup"]) assert.ok(script.includes(`var ${name} = function`), name);
 	assert.doesNotMatch(script, /https?:\/\//, "外の資源を読み込まない");
 });
 
-test("スクリプトを動かすと、押下の見張りを始める。画面の部品が無くても例外を外に出さない", () => {
+test("ページに、開く面と配色の指定を入れる。指定を入れる場所が無い HTML はそのまま返す", () => {
+	const page = '<!DOCTYPE html><html lang="ja"><head></head><body></body></html>';
+	assert.equal(withPageOptions(page, { tab: "reports", theme: "dark" }), '<!DOCTYPE html><html lang="ja" data-tab="reports" data-theme="dark"><head></head><body></body></html>');
+	assert.equal(withPageOptions(page, { tab: "tasks", theme: "" }), '<!DOCTYPE html><html lang="ja" data-tab="tasks"><head></head><body></body></html>');
+	assert.equal(withPageOptions("<html><body></body></html>", { tab: "reports", theme: "dark" }), "<html><body></body></html>");
+});
+
+test("スクリプトを動かすと、押下の見張りだけを始める。キーは見張らない（Pi Web では Esc が実行の中断なので、巻き込まないため）", () => {
 	const listened: Array<[string, boolean]> = [];
 	const view = { document: { addEventListener: (type: string, _handler: unknown, capture: boolean) => void listened.push([type, capture]) }, location: { search: "" } };
 	new Function("window", buildPopupScript())(view);
-	assert.deepEqual(listened, [["click", true], ["keydown", true]]);
+	assert.deepEqual(listened, [["click", true]]);
+	assert.doesNotMatch(buildPopupScript(), /keydown|Escape/);
 	assert.doesNotThrow(() => new Function("window", buildPopupScript())({}));
 });
 

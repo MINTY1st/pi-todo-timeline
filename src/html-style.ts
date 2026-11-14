@@ -1,7 +1,12 @@
 // ページの見た目と、タブの切り替え。外の資源は読み込まない
+const DARK_COLORS = "--bg:#1b1b1d; --panel:#242427; --line:#3a3a3f; --text:#e9e9ec; --muted:#a9a9b2; --dim:#8a8a94; --accent:#8fb4ff; --done:#5fd38d; --warn:#f2c462; --act:#7fd1e0;";
+const LIGHT_COLORS = "--bg:#fafafa; --panel:#fff; --line:#e3e3e8; --text:#1d1d22; --muted:#5d5d68; --dim:#85858f; --accent:#2f62d6; --done:#1f9d57; --warn:#a56a00; --act:#0b7f93;";
+
 export const PAGE_STYLE = `
-:root { --bg:#1b1b1d; --panel:#242427; --line:#3a3a3f; --text:#e9e9ec; --muted:#a9a9b2; --dim:#8a8a94; --accent:#8fb4ff; --done:#5fd38d; --warn:#f2c462; --act:#7fd1e0; }
-@media (prefers-color-scheme: light) { :root { --bg:#fafafa; --panel:#fff; --line:#e3e3e8; --text:#1d1d22; --muted:#5d5d68; --dim:#85858f; --accent:#2f62d6; --done:#1f9d57; --warn:#a56a00; --act:#0b7f93; } }
+:root { ${DARK_COLORS} }
+@media (prefers-color-scheme: light) { :root { ${LIGHT_COLORS} } }
+html[data-theme=dark] { ${DARK_COLORS} }
+html[data-theme=light] { ${LIGHT_COLORS} }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { background:var(--bg); color:var(--text); font:14px/1.6 system-ui,-apple-system,"Segoe UI","Hiragino Sans","Noto Sans JP",sans-serif; padding:18px 18px 40px; max-width:760px; margin:0 auto; }
 h1 { font-size:17px; font-weight:650; }
@@ -47,7 +52,10 @@ details { margin-top:8px; font-size:12.5px; color:var(--muted); } summary { curs
 [hidden] { display:none !important; }
 `;
 
-/** 選んだタブは window.name に覚え、ファイルの更新で描き直されても同じタブを開く */
+/**
+ * 選んだタブは window.name に覚え、ファイルの更新で描き直されても同じタブを開く。
+ * html の要素に data-tab があれば、そちらを優先する（小窓が、押されたボタンに合わせて指定する）。
+ */
 export const PAGE_SCRIPT = `
 (function () {
 	var prefix = "pi-timeline:";
@@ -60,6 +68,7 @@ export const PAGE_SCRIPT = `
 	buttons.forEach(function (button) { button.addEventListener("click", function () { show(button.dataset.tab); }); });
 	var saved = "";
 	try { saved = window.name || ""; } catch (error) {}
-	if (saved === prefix + "reports") show("reports");
+	var requested = document.documentElement.getAttribute("data-tab") || "";
+	if (requested === "reports" || (requested === "" && saved === prefix + "reports")) show("reports");
 })();
 `;
