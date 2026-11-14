@@ -281,6 +281,24 @@ test("ページを書き出せなくても、レポートは作り、/timeline �
 	assert.match(pi.notices.at(-1) ?? "", /ページを書き出せませんでした: 書き込めない場所/);
 });
 
+test("追跡の対象から外す処理が失敗しても、ページは書き、その処理は繰り返さない", async () => {
+	const pi = setup(undefined, "10:05");
+	let excludeReads = 0;
+	const read = pi.files.read;
+	pi.files.read = (path: string) => {
+		if (!path.endsWith("/.git/info/exclude")) return read(path);
+		excludeReads++;
+		throw new Error("EACCES: 読めない");
+	};
+	pi.turnEnd();
+	pi.turnEnd();
+	await flush();
+	assert.match(pi.stored.get(PAGE_PATH) ?? "", /タイムライン/);
+	assert.equal(excludeReads, 1);
+	await pi.command();
+	assert.doesNotMatch(pi.notices.at(-1) ?? "", /ページを書き出せませんでした/);
+});
+
 test("作業ディレクトリが git の作業ツリーなら、ページの置き場を追跡の対象から外す", async () => {
 	const pi = setup(undefined, "10:05");
 	pi.stored.set("/work/.git/info/exclude", "*.log\n");

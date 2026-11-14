@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFileAccess } from "../src/files.ts";
@@ -15,6 +15,16 @@ test("無いファイルは undefined、書いたファイルは読める。途�
 		files.write(path, "<b>");
 		assert.equal(files.read(path), "<b>");
 		assert.deepEqual(readdirSync(join(root, "deep", "dir")), ["page.html"], "書きかけのファイルを残さない");
+	} finally {
+		rmSync(root, { recursive: true, force: true });
+	}
+});
+
+test("途中がファイルで辿れない場所（git の worktree の .git など）も、無いものとして扱う", () => {
+	const root = mkdtempSync(join(tmpdir(), "pi-timeline-"));
+	try {
+		writeFileSync(join(root, ".git"), "gitdir: /elsewhere\n");
+		assert.equal(createFileAccess().read(join(root, ".git", "info", "exclude")), undefined);
 	} finally {
 		rmSync(root, { recursive: true, force: true });
 	}

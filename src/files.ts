@@ -9,7 +9,9 @@ export function createFileAccess(): FileAccess {
 			try {
 				return readFileSync(path, "utf8");
 			} catch (error) {
-				if ((error as { code?: string }).code === "ENOENT") return undefined;
+				// ENOTDIR は、途中がファイルで辿れないとき（git の worktree では .git がファイル）
+				const code = (error as { code?: string }).code;
+				if (code === "ENOENT" || code === "ENOTDIR") return undefined;
 				throw error;
 			}
 		},

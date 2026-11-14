@@ -74,8 +74,14 @@ function writePage(session: Session, context: HostContext): string | undefined {
 	const manager = context.sessionManager;
 	const startedAt = Date.parse(manager.getHeader()?.timestamp ?? "");
 	const path = pagePath({ cwd: context.cwd, directory: config.pageDirectory, sessionId: manager.getSessionId(), startedAt: Number.isNaN(startedAt) ? null : startedAt, timeZone });
-	if (!session.excluded) excludeFromGit(files, context.cwd, config.pageDirectory);
-	session.excluded = true;
+	if (!session.excluded) {
+		session.excluded = true;
+		try {
+			excludeFromGit(files, context.cwd, config.pageDirectory);
+		} catch {
+			// 追跡の対象から外せないだけなので、ページは書く
+		}
+	}
 	const entries = [...manager.getBranch()];
 	const span = activitySpan(entries);
 	const page = { title: manager.getSessionName?.(), tasks: tasksFromBranch(entries), reports: reportsFromBranch(entries), firstActivity: span.first, lastActivity: span.last, ...clockOf(session) };
