@@ -41,13 +41,13 @@ function fakeRegistry(state: { modelFound: boolean; hasAuth: boolean }) {
 function fakeScreen() {
 	const notices: string[] = [];
 	const widgets = new Map<string, string[]>();
-	const widgetCalls: Array<string[] | undefined> = [];
+	const widgetCalls: Array<{ key: string; lines: string[] | undefined }> = [];
 	const failures = { widget: undefined as Error | undefined };
 	const ui = {
 		notify: (message: string) => void notices.push(message),
 		setWidget: (key: string, lines: string[] | undefined) => {
 			if (failures.widget !== undefined) throw failures.widget;
-			widgetCalls.push(lines);
+			widgetCalls.push({ key, lines });
 			if (lines === undefined) widgets.delete(key);
 			else widgets.set(key, lines);
 		},
@@ -89,7 +89,7 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 	return {
 		state, branch, reports, files,
 		notices: screen.notices,
-		panel: () => plain(screen.widgets.get("timeline") ?? []),
+		panel: (key = "timeline") => plain(screen.widgets.get(key) ?? []),
 		widgetCalls: screen.widgetCalls,
 		screenFailures: screen.failures,
 		sessionStart: () => handlers.get("session_start")?.({ type: "session_start" }, context),
@@ -373,14 +373,17 @@ test("ターンの終わりに、下のボタンから開くパネルを今の�
 	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
 	pi.turnEnd();
 	await flush();
-	assert.deepEqual(pi.panel(), ["進捗 ░░░░░░░░░░░░░░░░░░░░ 0%  0/1 完了 · 経過 3分", "今   #1 不具合を直す（修正中）", "", "◐ #1 不具合を直す", "", `ページ ${PAGE_PATH}`]);
+	assert.deepEqual(pi.panel(), ["進捗 ░░░░░░░░░░░░░░░░░░░░ 0%  0/1 完了 · 経過 3分", "今   #1 不具合を直す（修正中）", "", "◐ #1 不具合を直す"]);
 });
 
-test("レポートができたら、パネルにも出す", async () => {
+test("レポートができたら、タスクとは別のボタン（reports）のパネルに出す", async () => {
 	const pi = setup();
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
 	pi.turnEnd();
 	await flush();
-	assert.deepEqual(pi.panel().slice(0, 2), ["15分 10:00–10:03  ツール 1 回", "  ・不具合を直した"]);
+	assert.deepEqual(pi.panel("reports"), ["15分 10:00–10:03  ツール 1 回", "  ・不具合を直した", "", `ページ ${PAGE_PATH}`]);
+	assert.equal(pi.panel("timeline").some((line) => line.includes("不具合を直した")), false);
+	assert.deepEqual([...new Set(pi.widgetCalls.map((call) => call.key))], ["timeline", "reports"]);
 });
 
 test("中身が変わらなければパネルを送り直さず、タスクもレポートも無ければ出さない", async () => {
@@ -403,17 +406,20 @@ test("出していたパネルは、タスクが無くなったら消す", async
 	pi.branch.push(custom("10:05", "rpiv-todo-state", { tasks: [], nextId: 2 }));
 	pi.turnEnd();
 	await flush();
-	assert.deepEqual(pi.widgetCalls.at(-1), undefined);
+	assert.deepEqual(pi.widgetCalls.at(-1), { key: "timeline", lines: undefined });
 	assert.deepEqual(pi.panel(), []);
 });
 
-test("セッションを開いたときにもパネルを出し、閉じたら消す", async () => {
-	const pi = setup(undefined, "10:05");
+test("セッションを開いたときにもパネルを出し、閉じたら両方とも消す", async () => {
+	const pi = setup();
 	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "in_progress", activeForm: "修正中" }], nextId: 2 }));
 	pi.sessionStart();
 	assert.equal(pi.panel()[1], "今   #1 不具合を直す（修正中）");
+	pi.turnEnd();
+	await flush();
+	assert.equal(pi.panel("reports").length > 0, true);
 	pi.shutdown();
-	assert.deepEqual(pi.panel(), []);
+	assert.deepEqual([pi.panel("timeline"), pi.panel("reports")], [[], []]);
 });
 
 test("パネルを切ってあるか、画面の無い実行なら、パネルを出さない", async () => {
@@ -467,6 +473,6 @@ test("セッションを閉じた後は、/timeline を実行しても、パネ�
 	const writesBefore = pi.files.writes.length;
 	await pi.command();
 	assert.deepEqual(pi.panel(), []);
-	assert.deepEqual(pi.widgetCalls.at(-1), undefined);
+	assert.deepEqual(pi.widgetCalls.at(-1), { key: "timeline", lines: undefined });
 	assert.equal(pi.files.writes.length, writesBefore);
 });

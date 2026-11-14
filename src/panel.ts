@@ -20,9 +20,10 @@ export interface PanelInput {
 const ESCAPE = String.fromCharCode(27);
 const COLORS = { bold: 1, dim: 2, green: 32, yellow: 33, cyan: 36 } as const;
 const BAR_WIDTH = 20;
-const RESULT_MAX_CHARS = 200;
+/** 完了の結果を、パネルで1行に収まる長さで切る。全文はページで読む */
+const RESULT_MAX_CHARS = 80;
 /** 最新のレポートより前のものを、1行で何件まで出すか */
-const EARLIER_REPORTS = 2;
+const EARLIER_REPORTS = 5;
 
 const paint = (color: keyof typeof COLORS, text: string): string => `${ESCAPE}[${COLORS[color]}m${text}${ESCAPE}[0m`;
 /** タスク名やレポートの文はモデルが書いたものなので、制御文字を取り除いてから出す */
@@ -86,10 +87,14 @@ function reportsSection(input: PanelInput): string[] {
 	];
 }
 
-/** パネルの行を返す。タスクもレポートも無ければ空（パネルを出さない） */
-export function renderPanel(input: PanelInput): string[] {
-	const sections = [tasksSection(input), reportsSection(input)].filter((section) => section.length > 0);
-	if (sections.length === 0) return [];
-	const page = input.pagePath === undefined ? [] : [[paint("dim", `ページ ${input.pagePath}`)]];
-	return [...sections, ...page].flatMap((section, index) => (index === 0 ? section : ["", ...section]));
+/** タスクのパネル（ボタン timeline）。進捗、今の作業、タスクと結果。タスクが無ければ空（パネルを出さない） */
+export function renderTasksPanel(input: PanelInput): string[] {
+	return tasksSection(input);
+}
+
+/** レポートのパネル（ボタン reports）。最新のレポート、それより前のレポート、ページの場所。レポートが無ければ空 */
+export function renderReportsPanel(input: PanelInput): string[] {
+	const reports = reportsSection(input);
+	if (reports.length === 0) return [];
+	return input.pagePath === undefined ? reports : [...reports, "", paint("dim", `ページ ${input.pagePath}`)];
 }

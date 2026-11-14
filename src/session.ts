@@ -16,12 +16,12 @@ export interface Session {
 	/** ページの置き場を git の追跡から外す処理を済ませたか */
 	excluded: boolean;
 	pageError: string | undefined;
-	/** 最後に送ったパネルの中身。出していなければ undefined */
-	panelText: string | undefined;
+	/** 今出しているパネルの中身。キーはパネルの名前。出していないパネルは入っていない */
+	panelTexts: Map<string, string>;
 }
 
 export function createSession(options: ExtensionOptions, host: TimelineHost): Session {
-	return { options, host, loaded: undefined, running: undefined, controller: undefined, retryAfter: 0, lastError: undefined, closed: false, excluded: false, pageError: undefined, panelText: undefined };
+	return { options, host, loaded: undefined, running: undefined, controller: undefined, retryAfter: 0, lastError: undefined, closed: false, excluded: false, pageError: undefined, panelTexts: new Map() };
 }
 
 export const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));
