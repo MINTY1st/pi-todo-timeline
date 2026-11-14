@@ -1,7 +1,7 @@
 {
   "name": "@minty1st/pi-todo-timeline",
   "version": "0.1.0",
-  "description": "Pi extension. A todo list with timed progress reports, shown as one timeline panel and an HTML page.",
+  "description": "Pi extension. A todo list with timed progress reports, shown in panels above the editor and on an HTML page.",
   "private": true,
   "type": "module",
   "repository": {

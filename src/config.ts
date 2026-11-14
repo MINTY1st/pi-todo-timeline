@@ -23,6 +23,8 @@ export interface TimelineConfig {
 	page: boolean;
 	/** ページの置き場。相対パスなら作業ディレクトリから */
 	pageDirectory: string;
+	/** todo ツールを登録する。別の拡張の todo と一緒に使うときは false にする（同じ名前のツールが2つあると、pi は起動に失敗する） */
+	todoTool: boolean;
 	/** 入力欄の上に、色つきの文字のパネルを出す */
 	panel: boolean;
 	panelMaxTasks: number;
@@ -107,6 +109,7 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 		enabled: reader.flag("enabled", true),
 		notify: reader.flag("notify", true),
 		page: reader.flag("page", true),
+		todoTool: reader.flag("todoTool", true),
 		panel: reader.flag("panel", true),
 		panelMaxTasks: reader.count("panelMaxTasks"),
 		panelMaxHeightPercent: reader.count("panelMaxHeightPercent"),

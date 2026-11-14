@@ -49,6 +49,11 @@ test("パネルの高さの上限は画面の半分。10〜90% の範囲で変�
 	assert.match(tooTall.problems[0], /^panelMaxHeightPercent は 10〜90/);
 });
 
+test("todo ツールは既定で登録し、切ることもできる", () => {
+	assert.equal(resolveConfig({}).config.todoTool, true);
+	assert.equal(resolveConfig({ todoTool: false }).config.todoTool, false);
+});
+
 test("思考の強さは書かれていればそのまま使い、無ければ指定しない", () => {
 	assert.equal(resolveConfig({}).config.reasoning, undefined);
 	assert.equal(resolveConfig({ reasoning: "low" }).config.reasoning, "low");

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { resolveConfig } from "../src/config.ts";
 import { createExtension } from "../src/extension.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
+import { TASKS_ENTRY_TYPE } from "../src/todo-state.ts";
 import { at, custom, fakeFiles, ms, plain, session, user } from "./fixtures.ts";
 
 type Handler = (...values: unknown[]) => unknown;
@@ -37,6 +38,20 @@ function fakeRegistry(state: { modelFound: boolean; hasAuth: boolean }) {
 	};
 }
 
+interface ToolResultLike {
+	content: Array<{ type: string; text: string }>;
+	details: Record<string, unknown>;
+	isError?: boolean;
+}
+interface ToolLike {
+	name: string;
+	executionMode: string;
+	promptGuidelines: string[];
+	parameters: { required: string[]; properties: Record<string, { enum?: string[] }> };
+	prepareArguments(raw: unknown): unknown;
+	execute(toolCallId: string, params: unknown, signal: undefined, onUpdate: undefined, context: unknown): Promise<ToolResultLike>;
+}
+
 /** 偽の画面。通知と、今出ているパネル、パネルを送った履歴を覚える */
 function fakeScreen() {
 	const notices: string[] = [];
@@ -55,19 +70,27 @@ function fakeScreen() {
 	return { notices, widgets, widgetCalls, failures, ui };
 }
 
-function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
-	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true, branchFailure: undefined as Error | undefined };
+/** 偽の pi。登録されたハンドラ・コマンド・ツールを覚え、記録の追加はセッションの記録の末尾に足す */
+function fakeHost(branch: unknown[]) {
 	const handlers = new Map<string, Handler>();
 	const commands = new Map<string, { handler: Handler }>();
-	const branch: unknown[] = session();
-	const screen = fakeScreen();
-	const files = fakeFiles();
-	const model = fakeRegistry(state);
+	const registeredTools = new Map<string, ToolLike>();
 	const host = {
 		on: (event: string, handler: Handler) => void handlers.set(event, handler),
 		registerCommand: (name: string, options: { handler: Handler }) => void commands.set(name, options),
+		registerTool: (definition: ToolLike) => void registeredTools.set(definition.name, definition),
 		appendEntry: (customType: string, data: unknown) => void branch.push(custom("10:15", customType, data)),
 	};
+	return { handlers, commands, registeredTools, host };
+}
+
+function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
+	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true, branchFailure: undefined as Error | undefined };
+	const branch: unknown[] = session();
+	const { handlers, commands, registeredTools, host } = fakeHost(branch);
+	const screen = fakeScreen();
+	const files = fakeFiles();
+	const model = fakeRegistry(state);
 	const context = {
 		get hasUI() { return state.hasUI; },
 		cwd: "/work",
@@ -100,6 +123,10 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 		turnEnd: () => handlers.get("turn_end")?.({ type: "turn_end" }, context),
 		shutdown: () => handlers.get("session_shutdown")?.({ type: "session_shutdown" }, context),
 		command: (argumentText = "") => commands.get("timeline")?.handler(argumentText, context),
+		tool: (name = "todo") => registeredTools.get(name),
+		/** モデルが todo ツールを呼んだのと同じ形で実行する */
+		todo: (params: Record<string, unknown>) => registeredTools.get("todo")?.execute("call", params, undefined, undefined, context) as Promise<ToolResultLike>,
+		entriesOf: (customType: string) => branch.filter((entry) => (entry as { customType?: string }).customType === customType) as Array<{ data: Record<string, unknown> }>,
 	};
 }
 
@@ -475,4 +502,70 @@ test("セッションを閉じた後は、/timeline を実行しても、パネ�
 	assert.deepEqual(pi.panel(), []);
 	assert.deepEqual(pi.widgetCalls.at(-1), { key: "timeline", lines: undefined });
 	assert.equal(pi.files.writes.length, writesBefore);
+});
+
+test("todo という名前のツールを登録する。操作の種類は必須で、同時には走らせない", () => {
+	const tool = setup().tool();
+	assert.ok(tool !== undefined);
+	assert.deepEqual(tool.parameters.required, ["action"]);
+	assert.deepEqual(tool.parameters.properties.action.enum, ["create", "update", "list", "get", "delete", "clear"]);
+	assert.deepEqual(tool.parameters.properties.status.enum, ["pending", "in_progress", "completed", "deleted"]);
+	assert.equal(tool.executionMode, "sequential");
+	assert.ok(tool.promptGuidelines.some((line) => /one-line result in 日本語/.test(line)), "完了のときに結果を1行書かせる");
+});
+
+test("作成すると、状態をセッションに記録し、結果の文を返し、ターンの終わりを待たずにパネルを更新する", async () => {
+	const pi = setup(undefined, "10:05");
+	const result = await pi.todo({ action: "create", tasks: [{ subject: "再現する" }, { subject: "直す" }] });
+	assert.equal(result.content[0].text, "Created #1: 再現する (pending)\nCreated #2: 直す (pending)");
+	const recorded = pi.entriesOf(TASKS_ENTRY_TYPE);
+	assert.equal(recorded.length, 1);
+	assert.deepEqual([recorded[0].data.action, recorded[0].data.nextId, (recorded[0].data.tasks as unknown[]).length], ["create", 3, 2]);
+	assert.deepEqual(result.details, recorded[0].data);
+	assert.equal(pi.panel()[0], "進捗 ░░░░░░░░░░░░░░░░░░░░ 0%  0/2 完了 · 経過 3分");
+});
+
+test("続けて呼ぶと、前の呼び出しで記録した状態を踏まえる", async () => {
+	const pi = setup(undefined, "10:05");
+	await pi.todo({ action: "create", subject: "再現する" });
+	const result = await pi.todo({ action: "update", id: 1, status: "in_progress", activeForm: "手順を確認中" });
+	assert.equal(result.content[0].text, "Updated #1 (pending → in_progress)");
+	assert.equal(pi.panel()[1], "今   #1 再現する（手順を確認中）");
+	assert.equal(pi.entriesOf(TASKS_ENTRY_TYPE).length, 2);
+});
+
+test("rpiv-todo の記録があるセッションでは、その続きから番号を振る", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "前に作った", status: "completed" }, { id: 2, subject: "途中", status: "in_progress" }], nextId: 3 }));
+	const result = await pi.todo({ action: "create", subject: "続き" });
+	assert.equal(result.content[0].text, "Created #3: 続き (pending)");
+});
+
+test("できない操作は、記録せず、失敗として理由を返す。一覧や詳細も記録しない", async () => {
+	const pi = setup(undefined, "10:05");
+	const failed = await pi.todo({ action: "update", id: 9, status: "completed" });
+	assert.deepEqual([failed.content[0].text, failed.isError, failed.details.error], ["Error: #9 not found", true, "#9 not found"]);
+	const listed = await pi.todo({ action: "list" });
+	assert.deepEqual([listed.content[0].text, listed.isError], ["No tasks", undefined]);
+	assert.equal(pi.entriesOf(TASKS_ENTRY_TYPE).length, 0);
+});
+
+test("画面の無い実行でもツールは動き、記録するが、パネルは出さない", async () => {
+	const pi = setup(undefined, "10:05");
+	pi.state.hasUI = false;
+	const result = await pi.todo({ action: "create", subject: "再現する" });
+	assert.equal(result.content[0].text, "Created #1: 再現する (pending)");
+	assert.equal(pi.entriesOf(TASKS_ENTRY_TYPE).length, 1);
+	assert.deepEqual(pi.widgetCalls, []);
+});
+
+test("モデルが tasks を JSON の文字列で渡してきても、配列に直して受け取る", () => {
+	const tool = setup().tool();
+	assert.deepEqual(tool?.prepareArguments({ action: "create", tasks: '[{"subject":"再現する"}]' }), { action: "create", tasks: [{ subject: "再現する" }] });
+	assert.deepEqual(tool?.prepareArguments({ action: "create", tasks: "配列ではない" }), { action: "create", tasks: "配列ではない" });
+	assert.deepEqual(tool?.prepareArguments({ action: "list" }), { action: "list" });
+});
+
+test("todoTool を切ってあれば、ツールを登録しない（別の拡張の todo と一緒に使うとき）", () => {
+	assert.equal(setup({ provider: "p", model: "m", todoTool: false }).tool(), undefined);
 });

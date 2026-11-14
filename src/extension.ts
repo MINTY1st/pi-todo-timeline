@@ -10,6 +10,7 @@ import { produceReports } from "./reporter.ts";
 import { clockOf, createSession, messageOf, settingsOf } from "./session.ts";
 import type { Session } from "./session.ts";
 import { renderTimeline, reportHead, tasksFromBranch } from "./view.ts";
+import { createTodoTool } from "./todo-tool.ts";
 import { clearPanels, refreshViews } from "./views.ts";
 
 export interface ExtensionOptions {
@@ -114,6 +115,7 @@ function close(session: Session, context: HostContext): void {
 export function createExtension(options: ExtensionOptions): (host: TimelineHost) => void {
 	return (host) => {
 		const session = createSession(options, host);
+		if (settingsOf(session).config.todoTool) host.registerTool(createTodoTool(session));
 		host.on("session_start", (_event, context) => {
 			if (context.hasUI) refreshViews(session, context);
 		});
