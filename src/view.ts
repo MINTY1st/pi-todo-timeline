@@ -69,13 +69,15 @@ export function periodLabel(periodMs: number): string {
 	return minutes % 60 === 0 ? `${minutes / 60}時間` : `${minutes}分`;
 }
 
-function createClock(now: number, timeZone: string | undefined) {
+/** 時刻の表し方。今日でない日には月日を前に付ける */
+export function createClock(now: number, timeZone: string | undefined) {
 	const time = new Intl.DateTimeFormat("ja-JP", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 	const day = new Intl.DateTimeFormat("ja-JP", { timeZone, month: "2-digit", day: "2-digit" });
 	const today = day.format(now);
-	return (report: Report): string => {
-		const prefix = day.format(report.start) === today ? "" : `${day.format(report.start)} `;
-		return `${prefix}${time.format(report.start)}–${time.format(report.end)}`;
+	const dayPrefix = (at: number): string => (day.format(at) === today ? "" : `${day.format(at)} `);
+	return {
+		range: (start: number, end: number): string => `${dayPrefix(start)}${time.format(start)}–${time.format(end)}`,
+		moment: (at: number): string => `${dayPrefix(at)}${time.format(at)}`,
 	};
 }
 
@@ -90,9 +92,12 @@ function detailLines(report: Report, head: string): string[] {
 
 type ClockInput = Pick<ViewInput, "now" | "timeZone" | "levelLabels">;
 
+/** 段の間隔の呼び名（「15分」「1時間」） */
+export const levelLabel = (report: Report, labels: readonly string[]): string => labels[report.level] ?? `段${report.level + 1}`;
+
 function createHead(input: ClockInput): (report: Report) => string {
-	const range = createClock(input.now, input.timeZone);
-	return (report) => `${input.levelLabels[report.level] ?? `段${report.level + 1}`} ${range(report)}`;
+	const clock = createClock(input.now, input.timeZone);
+	return (report) => `${levelLabel(report, input.levelLabels)} ${clock.range(report.start, report.end)}`;
 }
 
 /** レポートの見出し。段の間隔と、覆った時刻の範囲 */
