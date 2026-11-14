@@ -6,6 +6,8 @@ export interface TimelineConfig {
 	/** レポートを書かせるモデル。どちらかが未設定ならレポートは作らない */
 	provider: string | undefined;
 	model: string | undefined;
+	/** モデルに頼む思考の強さ（pi の thinking level）。undefined なら指定しない */
+	reasoning: string | undefined;
 	intervalMs: number;
 	/** 基本のレポートの間隔の何倍で束ねるか */
 	rollupFactor: number;
@@ -39,7 +41,7 @@ const NUMBER_RULES = {
 	maxItemChars: { min: 50, max: 5000, fallback: 600 },
 	maxLineChars: { min: 40, max: 1000, fallback: 160 },
 	timeoutSeconds: { min: 5, max: 600, fallback: 120 },
-	maxOutputTokens: { min: 200, max: 8000, fallback: 2000 },
+	maxOutputTokens: { min: 200, max: 16_000, fallback: 4000 },
 } satisfies Record<string, NumberRule>;
 
 type Fields = Record<string, unknown>;
@@ -76,10 +78,11 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 	const isFields = typeof raw === "object" && raw !== null && !Array.isArray(raw);
 	if (!isFields) problems.push("設定は JSON のオブジェクトで書く");
 	const reader = createReader(isFields ? (raw as Fields) : {}, problems);
-	const texts = { provider: reader.text("provider"), model: reader.text("model"), language: reader.text("language"), focus: reader.text("focus") };
+	const texts = { provider: reader.text("provider"), model: reader.text("model"), language: reader.text("language"), focus: reader.text("focus"), reasoning: reader.text("reasoning") };
 	const config: TimelineConfig = {
 		provider: texts.provider,
 		model: texts.model,
+		reasoning: texts.reasoning,
 		language: texts.language ?? DEFAULT_LANGUAGE,
 		focus: texts.focus ?? DEFAULT_FOCUS,
 		intervalMs: reader.count("intervalMinutes") * 60_000,

@@ -26,7 +26,10 @@ function fakeModel(answers: Array<string | Error>, clock: string) {
 	};
 	return { requests, dependencies };
 }
-const run = (entries: unknown[], model: ReturnType<typeof fakeModel>, force = false) => produceReports({ entries, config, force }, model.dependencies, new AbortController().signal);
+const run = (entries: unknown[], model: ReturnType<typeof fakeModel>, force = false, settings = config) => produceReports({ entries, config: settings, force }, model.dependencies, new AbortController().signal);
+/** 発言が1件しか入らない上限。記録が切れて次回に持ち越す状況を作る */
+const oneItemOnly = { ...config, maxInputChars: 60 };
+const todoState = (clock: string, task: Record<string, unknown>) => custom(clock, "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", ...task }], nextId: 2 });
 
 test("まだ報告していない活動が間隔に満たなければ、モデルを呼ばない", async () => {
 	const model = fakeModel([], "10:14");
@@ -57,6 +60,23 @@ test("タスクの記録があれば、今の状態を依頼に添える", async
 	const model = fakeModel([answer("直した")], "10:15");
 	await run([...session(), todo], model);
 	assert.match(model.requests[0].user, /✓ #1 不具合を再現する/);
+});
+
+test("記録が上限で切れたときは、タスクも切れ目の時点の状態を添え、その後の状態を混ぜない", async () => {
+	const entries = [todoState("09:59", { status: "in_progress" }), user("10:00", "あ".repeat(30)), user("10:20", "い".repeat(30)), todoState("10:30", { status: "completed", description: "後で完了した" })];
+	const model = fakeModel([answer("途中まで")], "10:40");
+	const result = await run(entries, model, false, oneItemOnly);
+	assert.equal(result.reports[0].end, ms("10:00"));
+	assert.match(model.requests[0].user, /◐ #1 不具合を直す/);
+	assert.doesNotMatch(model.requests[0].user, /後で完了した/);
+});
+
+test("記録が上限で切れて報告が追いついていない間は、束ねる期限が来ていても束ねない", async () => {
+	const entries = [saved("a", "09:00", "09:15"), user("10:00", "あ".repeat(30)), user("10:20", "い".repeat(30))];
+	const model = fakeModel([answer("途中まで")], "10:40");
+	const result = await run(entries, model, false, oneItemOnly);
+	assert.deepEqual(result.reports.map((item) => item.level), [0]);
+	assert.equal(model.requests.length, 1);
 });
 
 test("今すぐ作る指定なら期限の前でも作るが、報告していない活動が無ければ作らない", async () => {

@@ -11,11 +11,11 @@ interface ModelResponse {
 export interface ModelRegistryLike {
 	find(provider: string, modelId: string): object | undefined;
 	hasConfiguredAuth(model: object): boolean;
-	complete(
+	streamSimple(
 		model: object,
 		context: { systemPrompt: string; messages: Array<{ role: "user"; content: Array<{ type: "text"; text: string }>; timestamp: number }> },
-		options: { signal: AbortSignal; maxTokens: number },
-	): Promise<ModelResponse>;
+		options: { signal: AbortSignal; maxTokens: number; reasoning?: string },
+	): { result(): Promise<ModelResponse> };
 }
 
 export interface HostContext {
@@ -51,13 +51,19 @@ const isTextBlock = (block: unknown): block is { type: "text"; text: string } =>
 
 /** モデルに依頼を送り、返答の文を返す。モデルが失敗や中断を返したら例外にする */
 export async function completeText(registry: ModelRegistryLike, model: object, request: ModelRequest, config: TimelineConfig, signal: AbortSignal): Promise<string> {
-	const response = await registry.complete(
-		model,
-		{ systemPrompt: request.system, messages: [{ role: "user", content: [{ type: "text", text: request.user }], timestamp: Date.now() }] },
-		{ signal: AbortSignal.any([signal, AbortSignal.timeout(config.timeoutMs)]), maxTokens: config.maxOutputTokens },
-	);
+	const options = {
+		signal: AbortSignal.any([signal, AbortSignal.timeout(config.timeoutMs)]),
+		maxTokens: config.maxOutputTokens,
+		// 思考を切れないモデルがあるので、設定に書かれたときだけ渡す
+		...(config.reasoning === undefined ? {} : { reasoning: config.reasoning }),
+	};
+	const context = { systemPrompt: request.system, messages: [{ role: "user" as const, content: [{ type: "text" as const, text: request.user }], timestamp: Date.now() }] };
+	const response = await registry.streamSimple(model, context, options).result();
 	if (response.stopReason === "error" || response.stopReason === "aborted") {
 		throw new Error(response.errorMessage ?? `モデルの応答が ${response.stopReason} で終わった`);
 	}
-	return response.content.filter(isTextBlock).map((block) => block.text).join("");
+	const text = response.content.filter(isTextBlock).map((block) => block.text).join("");
+	// 中身の無い返答を直しに回すと、中身の無いレポートができるので、ここで失敗にする
+	if (text.trim() === "") throw new Error(`モデルの返答に文がありません（${response.stopReason}）`);
+	return text;
 }

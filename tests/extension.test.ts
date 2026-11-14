@@ -15,7 +15,7 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 	const commands = new Map<string, { handler: Handler }>();
 	const branch: unknown[] = session();
 	const notices: string[] = [];
-	const calls: Array<{ model: unknown; context: { systemPrompt: string; messages: Array<{ content: Array<{ text: string }> }> }; options: { signal: AbortSignal; maxTokens: number } }> = [];
+	const calls: Array<{ model: unknown; context: { systemPrompt: string; messages: Array<{ content: Array<{ text: string }> }> }; options: { signal: AbortSignal; maxTokens: number; reasoning?: string } }> = [];
 	let respond: (call: number) => Promise<unknown> = async () => answer("不具合を直した");
 	const host = {
 		on: (event: string, handler: Handler) => void handlers.set(event, handler),
@@ -29,9 +29,10 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 		modelRegistry: {
 			find: (provider: string, modelId: string) => (state.modelFound ? { provider, modelId } : undefined),
 			hasConfiguredAuth: () => state.hasAuth,
-			complete: (model: unknown, modelContext: never, options: never) => {
+			streamSimple: (model: unknown, modelContext: never, options: never) => {
 				calls.push({ model, context: modelContext, options });
-				return respond(calls.length);
+				const response = respond(calls.length);
+				return { result: () => response };
 			},
 		},
 	};
@@ -63,8 +64,19 @@ test("ターンの終わりに期限が来ていれば、設定したモデル�
 	assert.deepEqual(call.model, { provider: "p", modelId: "m" });
 	assert.match(call.context.systemPrompt, /Return only JSON/);
 	assert.match(call.context.messages[0].content[0].text, /同期の不具合を直して/);
-	assert.equal(call.options.maxTokens, 2000);
+	assert.equal(call.options.maxTokens, 4000);
 	assert.equal(call.options.signal.aborted, false);
+});
+
+test("思考の強さを設定してあれば依頼に付け、無ければ付けない", async () => {
+	const plain = setup();
+	plain.turnEnd();
+	await flush();
+	assert.equal("reasoning" in plain.calls[0].options, false);
+	const tuned = setup({ provider: "p", model: "m", reasoning: "low" });
+	tuned.turnEnd();
+	await flush();
+	assert.equal(tuned.calls[0].options.reasoning, "low");
 });
 
 test("期限の前のターンでは、モデルに頼まない", async () => {
@@ -165,6 +177,17 @@ test("モデルが失敗を返したら、記録せず、その理由を残す",
 	assert.equal(pi.reports().length, 0);
 	await pi.command();
 	assert.match(pi.notices.at(-1) ?? "", /429 上限/);
+});
+
+test("モデルの返答に文が無ければ、直しを頼まず、記録もせず、その理由を残す", async () => {
+	const pi = setup();
+	pi.setRespond(async () => ({ role: "assistant", stopReason: "length", content: [{ type: "thinking", thinking: "考えている途中で上限に達した" }] }));
+	pi.turnEnd();
+	await flush();
+	assert.equal(pi.calls.length, 1, "中身の無い返答を直させると、中身の無いレポートができる");
+	assert.equal(pi.reports().length, 0);
+	await pi.command();
+	assert.match(pi.notices.at(-1) ?? "", /モデルの返答に文がありません（length）/);
 });
 
 test("/timeline は、タスクとレポートをまとめて表示する", async () => {

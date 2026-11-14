@@ -10,6 +10,7 @@ test("何も書かれていなければ既定値を使い、モデルは未設�
 	assert.equal(config.intervalMs, 15 * 60_000);
 	assert.equal(config.rollupFactor, 4);
 	assert.equal(config.maxInputChars, 40_000);
+	assert.equal(config.maxOutputTokens, 4000, "思考の分も数えるモデルがあるので、要約の長さより多めにする");
 	assert.equal(config.language, "日本語");
 	assert.equal(config.maxLineChars, 160);
 	assert.equal(config.notify, true);
@@ -24,6 +25,11 @@ test("書かれた値を使い、分と秒の指定はミリ秒に直す", () =>
 	assert.equal(config.timeoutMs, 60_000);
 	assert.deepEqual([config.notify, config.enabled, config.language, config.maxLineChars], [false, false, "English", 320]);
 	assert.deepEqual(problems, []);
+});
+
+test("思考の強さは書かれていればそのまま使い、無ければ指定しない", () => {
+	assert.equal(resolveConfig({}).config.reasoning, undefined);
+	assert.equal(resolveConfig({ reasoning: "low" }).config.reasoning, "low");
 });
 
 test("範囲の外の値や型の違う値は既定値に戻し、どの項目かを知らせる", () => {

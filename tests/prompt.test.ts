@@ -44,6 +44,7 @@ test("基本のレポートの依頼には、期間・記録・前回の要約�
 		settings,
 	});
 	assert.match(request.system, /Return only JSON/);
+	assert.match(request.system, /Do not start an item with a label/, "表示の側で欄の名前を付けるので、行頭に付けさせない");
 	assert.match(request.system, /日本語/);
 	assert.match(request.system, /160/);
 	assert.match(request.user, /2030-11-01T10:00:00.000Z to 2030-11-01T10:15:00.000Z/);

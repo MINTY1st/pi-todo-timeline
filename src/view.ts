@@ -36,14 +36,22 @@ function isStoredTask(value: unknown): value is Fields {
 	return Number.isSafeInteger(value.id) && typeof value.subject === "string" && TASK_STATUSES.has(value.status as string) && isOptionalText(value.description) && isOptionalText(value.activeForm);
 }
 
-/** 最後に記録された形の正しいタスクの状態から、消したものを除いて返す */
-export function tasksFromBranch(entries: Iterable<unknown>): TaskView[] {
+/** エントリがタスクの状態の記録で、upTo までに書かれ、形が正しければ、その中身を返す */
+function storedTasks(entry: unknown, upTo: number): Fields[] | undefined {
+	if (!isObject(entry) || entry.type !== "custom" || entry.customType !== TODO_STATE_ENTRY_TYPE || !isObject(entry.data)) return undefined;
+	const recordedAt = typeof entry.timestamp === "string" ? Date.parse(entry.timestamp) : Number.NaN;
+	if (recordedAt > upTo) return undefined;
+	const stored = entry.data.tasks;
+	return Array.isArray(stored) && stored.every(isStoredTask) ? stored : undefined;
+}
+
+/**
+ * 最後に記録された形の正しいタスクの状態から、消したものを除いて返す。
+ * upTo を渡すと、その時刻までに記録された状態に限る（過去の区間のレポートに、後の状態を混ぜないため）。
+ */
+export function tasksFromBranch(entries: Iterable<unknown>, upTo = Number.POSITIVE_INFINITY): TaskView[] {
 	let latest: Fields[] = [];
-	for (const entry of entries) {
-		if (!isObject(entry) || entry.type !== "custom" || entry.customType !== TODO_STATE_ENTRY_TYPE || !isObject(entry.data)) continue;
-		const stored = entry.data.tasks;
-		if (Array.isArray(stored) && stored.every(isStoredTask)) latest = stored;
-	}
+	for (const entry of entries) latest = storedTasks(entry, upTo) ?? latest;
 	return latest.filter((task) => task.status !== "deleted") as unknown as TaskView[];
 }
 

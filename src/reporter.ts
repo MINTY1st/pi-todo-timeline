@@ -46,15 +46,25 @@ async function summarize(request: ModelRequest, work: Work): Promise<Summary> {
 	}
 }
 
-async function produceBase(work: Work, known: readonly Report[]): Promise<Report | undefined> {
+interface BaseOutcome {
+	report: Report | undefined;
+	/** 記録が上限で切れ、まだ報告していない分が残っている */
+	behind: boolean;
+}
+
+async function produceBase(work: Work, known: readonly Report[]): Promise<BaseOutcome> {
 	const { config, entries, force } = work.input;
 	const delta = collectDelta(entries, lastBaseEnd(known), { maxChars: config.maxInputChars, maxItemChars: config.maxItemChars });
-	if (delta.start === null || delta.end === null) return undefined;
-	if (!force && !isBaseDue(delta.start, work.dependencies.now(), config.intervalMs)) return undefined;
+	const skipped = { report: undefined, behind: delta.truncated };
+	if (delta.start === null || delta.end === null) return skipped;
+	if (!force && !isBaseDue(delta.start, work.dependencies.now(), config.intervalMs)) return skipped;
 	const previous = [...known].reverse().find((report) => report.level === 0)?.summary;
-	const request = buildBaseRequest({ start: delta.start, end: delta.end, deltaText: delta.text, previous, taskLines: taskLines(tasksFromBranch(entries)), settings: work.settings });
+	// タスクは、この区間の終わりの時点の状態を添える
+	const tasks = taskLines(tasksFromBranch(entries, delta.end));
+	const request = buildBaseRequest({ start: delta.start, end: delta.end, deltaText: delta.text, previous, taskLines: tasks, settings: work.settings });
 	const summary = await summarize(request, work);
-	return { version: 1, id: work.dependencies.newId(), level: 0, start: delta.start, end: delta.end, createdAt: work.dependencies.now(), toolCount: delta.toolCount, children: [], summary };
+	const report: Report = { version: 1, id: work.dependencies.newId(), level: 0, start: delta.start, end: delta.end, createdAt: work.dependencies.now(), toolCount: delta.toolCount, children: [], summary };
+	return { report, behind: delta.truncated };
 }
 
 async function produceRollup(work: Work, reports: readonly Report[]): Promise<Report | undefined> {
@@ -75,7 +85,10 @@ async function produceRollup(work: Work, reports: readonly Report[]): Promise<Re
 	};
 }
 
-/** 基本のレポート、続けて束ねたレポートの順に、期限の来たものを作る */
+/**
+ * 基本のレポート、続けて束ねたレポートの順に、期限の来たものを作る。
+ * 基本のレポートが記録に追いついていない間は束ねない（追いかけている途中の1件ずつを束ねてしまうため）。
+ */
 export async function produceReports(input: ProduceInput, dependencies: ReporterDependencies, signal: AbortSignal): Promise<ProduceResult> {
 	const { config } = input;
 	const work: Work = { input, dependencies, signal, settings: { language: config.language, maxLineChars: config.maxLineChars, focus: config.focus } };
@@ -83,8 +96,8 @@ export async function produceReports(input: ProduceInput, dependencies: Reporter
 	const reports: Report[] = [];
 	try {
 		const base = await produceBase(work, known);
-		if (base !== undefined) reports.push(base);
-		const rollup = await produceRollup(work, [...known, ...reports]);
+		if (base.report !== undefined) reports.push(base.report);
+		const rollup = base.behind ? undefined : await produceRollup(work, [...known, ...reports]);
 		if (rollup !== undefined) reports.push(rollup);
 		return { reports, error: undefined };
 	} catch (error) {
