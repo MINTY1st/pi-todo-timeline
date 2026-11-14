@@ -98,7 +98,8 @@ node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts rem
   ExecStartPre=-/usr/bin/env node %h/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts apply
   ```
 
-- Pi Web の場所は、`--dir`、環境変数 `PI_WEB_DIR`、実行している node の隣の `lib/node_modules/@agegr/pi-web` の順に決める
+- Pi Web の場所は、`--dir`、環境変数 `PI_WEB_DIR` の順に決める。どちらも無ければ、npm が全体に入れた場所を探す（実行している node の隣の `lib/node_modules`、node の隣の `node_modules`、Windows の `%APPDATA%\npm\node_modules`）。見つからなければ、探した場所を並べて終わる
+- Windows では、上のコマンドの `~/.pi/agent` を `%USERPROFILE%\.pi\agent` に読み替える。起動の前に当て直す仕組みは用意していないので、Pi Web を更新したら手で `apply` する
 - Pi Web がパネルの作りを変えると効かなくなる。そのときは「含む CSS がありません」と出て失敗する
 
 ### ページ
@@ -142,7 +143,7 @@ node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts rem
 
 設定ファイルに、レポートを書かせるモデルを指定する。指定するまでレポートは作らない。
 
-場所は `$PI_TODO_TIMELINE_CONFIG`、`$XDG_CONFIG_HOME/pi-todo-timeline/config.json`、`~/.config/pi-todo-timeline/config.json` の順に決まる。
+場所は `$PI_TODO_TIMELINE_CONFIG`、`$XDG_CONFIG_HOME/pi-todo-timeline/config.json`、`~/.config/pi-todo-timeline/config.json` の順に決まる。Windows でも同じで、`~` は `C:\Users\<名前>` になる。
 
 ```json
 {
@@ -224,6 +225,15 @@ flowchart TD
 - 「モデルの返答が出力の上限に達して途中で切れました」が続くときは、`maxOutputTokens` を上げるか、`reasoning` を下げる
 - タスクの記録は `pi-todo-timeline-tasks` という種類でセッションに残る。rpiv-todo の記録（`rpiv-todo-state`、2.15.0 で確かめた）も読める。形が合わない記録は読み飛ばす
 - rpiv-todo にある担当（`owner`）と任意の付帯情報（`metadata`）、待つ相手の循環の検査、`/todos` コマンドは持っていない
+
+## 動かして確かめた環境
+
+| 環境 | 確かめたこと |
+|---|---|
+| Linux（WSL2）、pi 1.5.0 / 1.5.2、Node 24、Pi Web 0.15.0 | すべての機能。実際のモデルでの `todo` の操作とレポートの作成を含む |
+| Windows 11、pi 1.5.2、Node 24 | テストの全件、拡張の読み込み、パネル、ページの書き出し、`.git/info/exclude` への追記、設定の場所、高さのコマンド |
+
+Windows では、モデルを呼ぶ部分（`todo` の操作、レポートの作成）と、Pi Web での見え方は動かしていない。この部分は OS に依らない作りで、テストは Windows でも全件通る。
 
 ## テスト
 

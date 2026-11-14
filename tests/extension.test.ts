@@ -4,12 +4,12 @@ import { resolveConfig } from "../src/config.ts";
 import { createExtension } from "../src/extension.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
 import { TASKS_ENTRY_TYPE } from "../src/todo-state.ts";
-import { at, custom, fakeFiles, ms, plain, session, user } from "./fixtures.ts";
+import { absolute, at, custom, fakeFiles, ms, native, plain, session, user } from "./fixtures.ts";
 
 type Handler = (...values: unknown[]) => unknown;
 const answer = (first: string) => ({ role: "assistant", stopReason: "stop", content: [{ type: "text", text: JSON.stringify({ progress: [first], uncertainties: [], userActions: [] }) }] });
 const flush = () => new Promise((resolve) => setImmediate(resolve));
-const PAGE_PATH = "/work/.pi/timeline/1101-1000-01a1d8af.html";
+const PAGE_PATH = absolute("/work/.pi/timeline/1101-1000-01a1d8af.html");
 
 type ModelCall = { model: unknown; context: { systemPrompt: string; messages: Array<{ content: Array<{ text: string }> }> }; options: { signal: AbortSignal; maxTokens: number; reasoning?: string } };
 
@@ -339,7 +339,7 @@ test("追跡の対象から外す処理が失敗しても、ページは書き�
 	let excludeReads = 0;
 	const read = pi.files.read;
 	pi.files.read = (path: string) => {
-		if (!path.endsWith("/.git/info/exclude")) return read(path);
+		if (!path.endsWith(native("/.git/info/exclude"))) return read(path);
 		excludeReads++;
 		throw new Error("EACCES: 読めない");
 	};
@@ -354,11 +354,11 @@ test("追跡の対象から外す処理が失敗しても、ページは書き�
 
 test("作業ディレクトリが git の作業ツリーなら、ページの置き場を追跡の対象から外す", async () => {
 	const pi = setup(undefined, "10:05");
-	pi.stored.set("/work/.git/info/exclude", "*.log\n");
+	pi.files.put("/work/.git/info/exclude", "*.log\n");
 	pi.turnEnd();
 	pi.turnEnd();
 	await flush();
-	assert.equal(pi.stored.get("/work/.git/info/exclude"), "*.log\n/.pi/timeline/\n");
+	assert.equal(pi.files.at("/work/.git/info/exclude"), "*.log\n/.pi/timeline/\n");
 });
 
 test("/timeline now は、期限の前でもレポートを作ってから表示する", async () => {
