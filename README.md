@@ -1,8 +1,8 @@
 # pi-todo-timeline
 
-長い作業の進み具合を、一定の間隔のレポートとしてセッションに残す pi の拡張機能。タスクの状態とレポートを1枚の HTML のページに書き出し、`/timeline` でも表示する。
+タスクの一覧（`todo` ツール）と、一定の間隔の進み具合のレポートを、1か所にまとめて見せる pi の拡張機能。入力欄の上のパネルと、1枚の HTML のページ、`/timeline` で表示する。
 
-DeepSeek Harness の Timeline プラグイン（`@deepseek-ai/dsh-timeline`）のうち、定期レポートの部分を pi 向けに作り直したもの。タスクの管理は作らず、[`@juicesharp/rpiv-todo`](https://www.npmjs.com/package/@juicesharp/rpiv-todo) の記録を読む。
+DeepSeek Harness の Timeline プラグイン（`@deepseek-ai/dsh-timeline`）の「タスクは常に見える所に、レポートは見に行く所に」という分け方に倣った。`todo` ツールの名前と引数は [`@juicesharp/rpiv-todo`](https://www.npmjs.com/package/@juicesharp/rpiv-todo) と同じにしてあり、置き換えて使える。
 
 ## 導入
 
@@ -12,12 +12,32 @@ pi install git:github.com/MINTY1st/pi-todo-timeline
 
 入れたら pi を起動し直すか `/reload` する。レポートを作るには、下の「設定」でモデルを指定する。
 
+`@juicesharp/rpiv-todo` など、`todo` という名前のツールを持つ別の拡張とは一緒に入れられない（同じ名前のツールが2つあると、pi は起動に失敗する）。先にそちらを外すか（`pi remove npm:@juicesharp/rpiv-todo`）、こちらの設定で `todoTool` を `false` にする。rpiv-todo が残したタスクの記録は、そのまま読んで続きから使える。
+
 ## 使い方
 
 ```
 /timeline        タスクとレポートを表示する
 /timeline now    今までの分のレポートを作ってから表示する（間隔を待たない）
 ```
+
+### タスク（todo ツール）
+
+モデルが `todo` ツールでタスクを作り、進めるたびに更新する。人が直接操作するコマンドは無い。
+
+| 操作 | 内容 |
+|---|---|
+| `create` | 1件、または `tasks` でまとめて作る。番号は1から順に振る |
+| `update` | 状態（`pending` → `in_progress` → `completed`）、件名、説明、今の作業（`activeForm`）、待つ相手を変える |
+| `list` / `get` | 一覧と、1件の詳細 |
+| `delete` | 消した印を付ける（番号は使い回さない） |
+| `clear` | 全部消して、番号を1から振り直す |
+
+- 完了にするときは、何をしてどうなったかを `description` に1行で書くよう、モデルへの指示に入れてある。パネルとページの「結果」はこれを出している
+- 完了したタスクは消さずに残す。完了から戻すことはできない（消すことだけできる）
+- 状態は操作のたびにセッションに記録する。`/reload`、圧縮、`/tree` での移動の後も、その時点の記録から読み直す
+- 操作の直後に、パネルとページを更新する
+- 画面の無い実行（`pi -p` や、サブエージェントとして動く子の pi）でもツールは使える。タスクはセッションごとに別
 
 ### パネル
 
@@ -116,7 +136,7 @@ node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts rem
 
 - 最新の15分のレポートだけ3欄（進捗・未解決・できること）を出し、それより前は1件目だけを新しい順に並べる
 - レポートができるたびに、1件目を通知で知らせる（`notify` で切れる）
-- タスクの欄は rpiv-todo が入っているときだけ出る。完了したタスクの下の行は、タスクの `description`
+- 完了したタスクの下の行は、タスクの `description`（完了のときに書かれた結果）
 
 ## 設定
 
@@ -146,6 +166,7 @@ node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts rem
 | `language` | レポートを書く言語の名前 | `日本語` |
 | `focus` | レポートで重く扱う点（指示文に入る） | 何が変わり、目的にどう影響するか |
 | `notify` | レポートができたら通知する | `true` |
+| `todoTool` | `todo` ツールを登録する。別の拡張の `todo` と一緒に使うときは `false` | `true` |
 | `panel` | 入力欄の上にパネルを出す | `true` |
 | `panelMaxTasks` | パネルに並べるタスクの上限（1〜50） | `10` |
 | `panelMaxHeightPercent` | Pi Web のパネルの高さの上限。画面の高さに対する %（10〜90）。上のコマンドが使う | `50` |
@@ -201,7 +222,8 @@ flowchart TD
 - ページはセッションごとに1ファイルずつ増える。古いものは自動では消さない
 - ページの「タスク」「レポート」のタブは、ファイルの更新で描き直されても同じタブを開くよう `window.name` に覚える。プレビューの作りによっては、更新のたびに「タスク」に戻る
 - 「モデルの返答が出力の上限に達して途中で切れました」が続くときは、`maxOutputTokens` を上げるか、`reasoning` を下げる
-- タスクの記録の形は rpiv-todo 2.15.0 で確かめた。形が合わない記録は読み飛ばし、タスクの欄を出さない
+- タスクの記録は `pi-todo-timeline-tasks` という種類でセッションに残る。rpiv-todo の記録（`rpiv-todo-state`、2.15.0 で確かめた）も読める。形が合わない記録は読み飛ばす
+- rpiv-todo にある担当（`owner`）と任意の付帯情報（`metadata`）、待つ相手の循環の検査、`/todos` コマンドは持っていない
 
 ## テスト
 
@@ -215,4 +237,4 @@ pi の型には依存していない（使う部分だけを `src/host.ts` に�
 
 ## 出典
 
-レポートの文体の決まりと JSON の形は、DeepSeek Harness の Timeline（MIT）を元にした。詳しくは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+レポートの文体の決まりと JSON の形は、DeepSeek Harness の Timeline（MIT）を元にした。`todo` ツールの操作・引数・応答の文・状態の移り変わりの決まりは、@juicesharp/rpiv-todo（MIT）に合わせた。詳しくは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
