@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { resolveConfig } from "../src/config.ts";
 import { createExtension } from "../src/extension.ts";
 import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import { custom, ms, session } from "./fixtures.ts";
+import { custom, ms, session, user } from "./fixtures.ts";
 
 type Handler = (...values: unknown[]) => unknown;
 const answer = (first: string) => ({ role: "assistant", stopReason: "stop", content: [{ type: "text", text: JSON.stringify({ progress: [first], uncertainties: [], userActions: [] }) }] });
@@ -120,6 +120,24 @@ test("作っている最中に次のターンが終わっても、重ねて頼�
 	release(answer("不具合を直した"));
 	await flush();
 	assert.equal(pi.reports().length, 1);
+});
+
+test("作っている最中に /timeline now が2回届いても、同じ記録を覆うレポートを二重に作らない", async () => {
+	const pi = setup();
+	const release = pi.holdResponse();
+	pi.turnEnd();
+	await flush();
+	const commands = [pi.command("now"), pi.command("now")];
+	pi.branch.push(user("10:14", "追加で頼む"));
+	pi.setRespond(async () => answer("追加を済ませた"));
+	release(answer("不具合を直した"));
+	await Promise.all(commands);
+	const ranges = pi.reports().map((entry) => {
+		const { start, end } = (entry as { data: { start: number; end: number } }).data;
+		return [start, end];
+	});
+	assert.deepEqual(ranges, [[ms("10:00"), ms("10:03")], [ms("10:14"), ms("10:14")]]);
+	assert.equal(pi.calls.length, 2);
 });
 
 test("失敗した後はしばらく頼まず、5分経てばまた頼む", async () => {

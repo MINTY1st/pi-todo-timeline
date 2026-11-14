@@ -107,7 +107,8 @@ function notesOf(session: Session, context: HostContext): string[] {
 
 async function show(session: Session, argumentText: string, context: HostContext): Promise<void> {
 	if (argumentText.trim() === FORCE_ARGUMENT) {
-		await session.running;
+		// 待っている間に別の /timeline now が作り始めることがあるので、空くまで確かめ直す
+		while (session.running !== undefined) await session.running;
 		await start(session, context, true);
 	}
 	const entries = [...context.sessionManager.getBranch()];
