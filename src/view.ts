@@ -64,6 +64,27 @@ export function taskLines(tasks: readonly TaskView[]): string[] {
 	});
 }
 
+/** 最初の活動から最後の活動までの時間。どちらかが無ければ空 */
+export function elapsedLabel(firstActivity: number | null, lastActivity: number | null): string {
+	if (firstActivity === null || lastActivity === null) return "";
+	const minutes = Math.max(0, Math.round((lastActivity - firstActivity) / 60_000));
+	const hours = Math.floor(minutes / 60);
+	return hours > 0 ? `経過 ${hours}時間 ${minutes % 60}分` : `経過 ${minutes}分`;
+}
+
+/** 今の作業。進行中のタスクがあればそれ、無ければ最初の未着手。全部終わっていれば undefined */
+export function focusOf(tasks: readonly TaskView[]): { task: TaskView; active: boolean } | undefined {
+	const active = tasks.find((task) => task.status === "in_progress");
+	const task = active ?? tasks.find((task) => task.status === "pending");
+	return task === undefined ? undefined : { task, active: active !== undefined };
+}
+
+/** 束ねたレポートに含まれる基本のレポートを除き、新しい順に並べる */
+export function topLevelReports(reports: readonly Report[]): Report[] {
+	const bundled = new Set(reports.flatMap((report) => report.children));
+	return reports.filter((report) => !bundled.has(report.id)).sort((left, right) => right.end - left.end || right.level - left.level);
+}
+
 export function periodLabel(periodMs: number): string {
 	const minutes = Math.round(periodMs / 60_000);
 	return minutes % 60 === 0 ? `${minutes / 60}時間` : `${minutes}分`;

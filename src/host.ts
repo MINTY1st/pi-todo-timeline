@@ -27,12 +27,16 @@ export interface HostContext {
 		getHeader(): { timestamp?: string } | null | undefined;
 		getSessionName?(): string | undefined;
 	};
-	ui: { notify(message: string, type?: "info" | "warning" | "error"): void };
+	ui: {
+		notify(message: string, type?: "info" | "warning" | "error"): void;
+		/** 入力欄の上か下に、文字の行のパネルを出す。undefined を渡すと消す */
+		setWidget(key: string, lines: string[] | undefined, options?: { placement?: "aboveEditor" | "belowEditor" }): void;
+	};
 	modelRegistry: ModelRegistryLike;
 }
 
 export interface TimelineHost {
-	on(event: "turn_end" | "session_shutdown", handler: (event: unknown, context: HostContext) => unknown): void;
+	on(event: "session_start" | "turn_end" | "session_shutdown", handler: (event: unknown, context: HostContext) => unknown): void;
 	registerCommand(name: string, options: { description: string; handler: (argumentText: string, context: HostContext) => Promise<void> }): void;
 	appendEntry(customType: string, data: unknown): void;
 }
