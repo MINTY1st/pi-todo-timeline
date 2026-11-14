@@ -10,7 +10,7 @@ import { produceReports } from "./reporter.ts";
 import { clockOf, createSession, messageOf, settingsOf } from "./session.ts";
 import type { Session } from "./session.ts";
 import { renderTimeline, reportHead, tasksFromBranch } from "./view.ts";
-import { clearPanel, refreshViews } from "./views.ts";
+import { clearPanels, refreshViews } from "./views.ts";
 
 export interface ExtensionOptions {
 	files: FileAccess;
@@ -105,7 +105,7 @@ function close(session: Session, context: HostContext): void {
 	session.closed = true;
 	session.controller?.abort();
 	try {
-		clearPanel(session, context);
+		clearPanels(session, context);
 	} catch {
 		// 閉じる途中で画面がもう無いことがある。消せなくても、閉じる処理は続ける
 	}

@@ -2,7 +2,7 @@
 import type { HostContext } from "./host.ts";
 import { renderPage } from "./html.ts";
 import { activitySpan, excludeFromGit, pagePath, publishPage } from "./page.ts";
-import { renderPanel } from "./panel.ts";
+import { renderReportsPanel, renderTasksPanel } from "./panel.ts";
 import { reportsFromBranch } from "./records.ts";
 import type { Report } from "./records.ts";
 import { clockOf, messageOf, settingsOf } from "./session.ts";
@@ -10,7 +10,8 @@ import type { Session } from "./session.ts";
 import { tasksFromBranch } from "./view.ts";
 import type { TaskView } from "./view.ts";
 
-export const PANEL_KEY = "timeline";
+/** パネルの名前。Pi Web では、この名前のボタンが画面の下に並び、押したものだけが開く */
+export const PANEL_KEYS = { tasks: "timeline", reports: "reports" } as const;
 
 interface Snapshot {
 	tasks: TaskView[];
@@ -56,16 +57,22 @@ function refreshPage(session: Session, context: HostContext, snapshot: Snapshot)
 	}
 }
 
-/** 中身が変わったときだけ送る。タスクもレポートも無ければ、出していたパネルを消す */
-function refreshPanel(session: Session, context: HostContext, snapshot: Snapshot, page: string | undefined): void {
+/** 中身が変わったときだけ送る。行が無ければ、出していたパネルを消す */
+function sendPanel(session: Session, context: HostContext, key: string, lines: string[]): void {
+	const text = lines.length === 0 ? undefined : lines.join("\n");
+	if (text === session.panelTexts.get(key)) return;
+	context.ui.setWidget(key, text === undefined ? undefined : lines, { placement: "aboveEditor" });
+	// 送れたときだけ覚える。送れなかったら、次の機会に送り直す
+	if (text === undefined) session.panelTexts.delete(key);
+	else session.panelTexts.set(key, text);
+}
+
+function refreshPanels(session: Session, context: HostContext, snapshot: Snapshot, page: string | undefined): void {
 	const { config } = settingsOf(session);
 	if (!config.panel) return;
-	const lines = renderPanel({ ...snapshot, ...clockOf(session), pagePath: page, maxTasks: config.panelMaxTasks });
-	const text = lines.length === 0 ? undefined : lines.join("\n");
-	if (text === session.panelText) return;
-	context.ui.setWidget(PANEL_KEY, text === undefined ? undefined : lines, { placement: "aboveEditor" });
-	// 送れたときだけ覚える。送れなかったら、次の機会に送り直す
-	session.panelText = text;
+	const input = { ...snapshot, ...clockOf(session), pagePath: page, maxTasks: config.panelMaxTasks };
+	sendPanel(session, context, PANEL_KEYS.tasks, renderTasksPanel(input));
+	sendPanel(session, context, PANEL_KEYS.reports, renderReportsPanel(input));
 }
 
 /**
@@ -79,15 +86,17 @@ export function refreshViews(session: Session, context: HostContext): string | u
 	try {
 		const snapshot = snapshotOf(context);
 		page = refreshPage(session, context, snapshot);
-		refreshPanel(session, context, snapshot, page);
+		refreshPanels(session, context, snapshot, page);
 	} catch {
 		// 次のターンの終わりにまた試す
 	}
 	return page;
 }
 
-export function clearPanel(session: Session, context: HostContext): void {
-	if (session.panelText === undefined) return;
-	session.panelText = undefined;
-	context.ui.setWidget(PANEL_KEY, undefined);
+/** 出しているパネルをすべて消す */
+export function clearPanels(session: Session, context: HostContext): void {
+	for (const key of [...session.panelTexts.keys()]) {
+		session.panelTexts.delete(key);
+		context.ui.setWidget(key, undefined);
+	}
 }
