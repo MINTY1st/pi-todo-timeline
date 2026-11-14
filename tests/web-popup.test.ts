@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { apiPath, buildPopupScript, isLayoutChunk, pageNameFor, sessionIdFrom, tabForClick, withPageOptions } from "../src/web-popup.ts";
+import { apiPath, buildPopupScript, isLayoutChunk, LAYOUT_TARGET, pageNameFor, sessionIdFrom, tabForClick, withPageOptions } from "../src/web-popup.ts";
 import { applyPatch } from "../src/web-patch.ts";
 import { fakeFiles, native } from "./fixtures.ts";
 
@@ -88,14 +88,26 @@ test("スクリプトを足す先は、Pi Web の画面の共通部分のチャ�
 test("スクリプトは共通部分のチャンクにだけ足し、2回目は書かず、外すと元の中身に戻る", () => {
 	const files = fakeFiles({ "/web/app/layout-abc.js": CHUNK, "/web/app/page-abc.js": CHUNK });
 	const script = buildPopupScript();
-	const applied = applyPatch(files, "/web/app", isLayoutChunk, script, "足す先がありません");
+	const applied = applyPatch(files, "/web/app", LAYOUT_TARGET, script, "足す先がありません");
 	assert.deepEqual([applied.ok, applied.changed], [true, ["layout-abc.js"]]);
 	assert.ok((files.at("/web/app/layout-abc.js") ?? "").startsWith(CHUNK));
 	assert.doesNotThrow(() => new Function("self", "window", files.at("/web/app/layout-abc.js") ?? ""), "足した後もチャンクとして成り立つ");
-	assert.deepEqual(applyPatch(files, "/web/app", isLayoutChunk, script, "足す先がありません").changed, []);
-	applyPatch(files, "/web/app", isLayoutChunk, undefined, "足す先がありません");
+	assert.deepEqual(applyPatch(files, "/web/app", LAYOUT_TARGET, script, "足す先がありません").changed, []);
+	applyPatch(files, "/web/app", LAYOUT_TARGET, undefined, "足す先がありません");
 	assert.equal(files.at("/web/app/layout-abc.js"), CHUNK);
 	assert.deepEqual(files.writes, [native("/web/app/layout-abc.js"), native("/web/app/layout-abc.js")]);
-	const missing = applyPatch(fakeFiles({ "/web/app/page-abc.js": CHUNK }), "/web/app", isLayoutChunk, script, "足す先がありません");
+	const missing = applyPatch(fakeFiles({ "/web/app/page-abc.js": CHUNK }), "/web/app", LAYOUT_TARGET, script, "足す先がありません");
 	assert.deepEqual([missing.ok, missing.message], [false, "足す先がありません"]);
+});
+
+test("名前の合わないものは読まない（置き場には、読めないディレクトリも並んでいる）", () => {
+	const files = fakeFiles({ "/web/app/layout-abc.js": CHUNK });
+	const read = files.read;
+	files.read = (path: string) => {
+		if (!path.endsWith("layout-abc.js")) throw new Error("EISDIR: illegal operation on a directory, read");
+		return read(path);
+	};
+	files.list = () => ["api", "layout-abc.js", "login"];
+	const applied = applyPatch(files, "/web/app", LAYOUT_TARGET, buildPopupScript(), "足す先がありません");
+	assert.deepEqual([applied.ok, applied.changed], [true, ["layout-abc.js"]]);
 });

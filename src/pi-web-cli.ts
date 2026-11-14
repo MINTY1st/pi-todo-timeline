@@ -7,7 +7,7 @@ import { createFileAccess } from "./files.ts";
 import { applyToDirectory, buildRule } from "./web-css.ts";
 import { applyPatch } from "./web-patch.ts";
 import type { PatchFiles, PatchOutcome } from "./web-patch.ts";
-import { buildPopupScript, isLayoutChunk } from "./web-popup.ts";
+import { buildPopupScript, LAYOUT_TARGET } from "./web-popup.ts";
 
 export interface CliContext {
 	files: PatchFiles;
@@ -80,7 +80,7 @@ function reportPopup(wanted: boolean, outcome: PatchOutcome): string[] {
 function patchPopup(piWeb: string, action: Action, context: CliContext): { wanted: boolean; outcome: PatchOutcome } {
 	const wanted = action === "apply" && context.popup();
 	const directory = join(piWeb, ".next", "static", "chunks", "app");
-	return { wanted, outcome: applyPatch(context.files, directory, isLayoutChunk, wanted ? buildPopupScript() : undefined, POPUP_TARGET_MISSING) };
+	return { wanted, outcome: applyPatch(context.files, directory, LAYOUT_TARGET, wanted ? buildPopupScript() : undefined, POPUP_TARGET_MISSING) };
 }
 
 /** 見つかった Pi Web に、高さの上書きと小窓のスクリプトを足す（外す） */

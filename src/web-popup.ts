@@ -1,3 +1,5 @@
+import type { PatchTarget } from "./web-patch.ts";
+
 // Pi Web の画面に足す、小窓のスクリプト。
 // 下の関数はブラウザの中で動く。buildPopupScript が関数の中身をそのまま文字にして並べるので、
 // それぞれの関数は、ここに並ぶ関数と SETTINGS のほかは、モジュールの外のものを使わない。
@@ -211,9 +213,11 @@ const EMBEDDED = [sessionIdFrom, apiPath, pageNameFor, tabForClick, pageStyle, w
 const LAYOUT_NAME = /^layout-[^.]+\.js$/;
 const CHUNK_PREFIX = "(self.webpackChunk_N_E";
 
-/** Pi Web の画面の共通部分のチャンクか。足す先をこれに限る */
+/** スクリプトを足す先。Pi Web の画面の共通部分のチャンクに限る */
+export const LAYOUT_TARGET: PatchTarget = { matchesName: (name) => LAYOUT_NAME.test(name), matchesContent: (content) => content.startsWith(CHUNK_PREFIX) };
+
 export function isLayoutChunk(name: string, content: string): boolean {
-	return LAYOUT_NAME.test(name) && content.startsWith(CHUNK_PREFIX);
+	return LAYOUT_TARGET.matchesName(name) && LAYOUT_TARGET.matchesContent(content);
 }
 
 /** チャンクの末尾に足すスクリプト。失敗しても、Pi Web の画面は元のまま動く */

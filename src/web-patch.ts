@@ -16,6 +16,13 @@ export interface PatchOutcome {
 	message: string;
 }
 
+/** 足す先のファイルの決め方。名前で先に絞り、合ったものだけ中身を読む（置き場にはディレクトリも並んでいる） */
+export interface PatchTarget {
+	matchesName(name: string): boolean;
+	/** 足した分を除いた、元の中身で判定する */
+	matchesContent(content: string): boolean;
+}
+
 /** CSS でも JavaScript でも注釈として読まれる形の目印 */
 const MARKER_START = "/* pi-todo-timeline:start */";
 const MARKER_END = "/* pi-todo-timeline:end */";
@@ -39,17 +46,17 @@ export function patchText(current: string, block: string | undefined): string | 
 const failure = (message: string): PatchOutcome => ({ ok: false, changed: [], unchanged: [], message });
 
 /**
- * ディレクトリの直下のファイルのうち、isTarget が認めたものにだけ block を足す（block が undefined なら外す）。
- * isTarget には、足した分を除いた元の中身を渡す。対象が1つも無ければ、notFound を理由にして失敗を返す。
+ * ディレクトリの直下のファイルのうち、target に合うものにだけ block を足す（block が undefined なら外す）。
+ * 対象が1つも無ければ、notFound を理由にして失敗を返す。
  */
-export function applyPatch(files: PatchFiles, directory: string, isTarget: (name: string, content: string) => boolean, block: string | undefined, notFound: string): PatchOutcome {
+export function applyPatch(files: PatchFiles, directory: string, target: PatchTarget, block: string | undefined, notFound: string): PatchOutcome {
 	const names = files.list(directory);
 	if (names === undefined) return failure(`${directory} が見つかりません`);
 	const outcome: PatchOutcome = { ok: true, changed: [], unchanged: [], message: "" };
-	for (const name of names) {
+	for (const name of names.filter((candidate) => target.matchesName(candidate))) {
 		const path = join(directory, name);
 		const current = files.read(path);
-		if (current === undefined || !isTarget(name, withoutBlock(current))) continue;
+		if (current === undefined || !target.matchesContent(withoutBlock(current))) continue;
 		const next = patchText(current, block);
 		if (next === null) outcome.unchanged.push(name);
 		else {

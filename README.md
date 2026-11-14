@@ -20,7 +20,7 @@ Tasks stay where you always see them and reports where you go to read them, as i
 - Node.js 24.21 or later and Pi 1.5 or later.
 - Linux or Windows. Tested on WSL2 and on Windows 11 with Pi 1.5.2; macOS is untested.
 - A model for reports is optional. Without one, tasks, panels, and the page still work.
-- [Pi Web](https://github.com/agegr/pi-web) is optional. It shows each panel behind a button and previews the page beside the chat. Pi's terminal UI shows both panels above the editor at once; that view is untested.
+- [Pi Web](https://github.com/agegr/pi-web) is optional. It shows each panel behind a button and previews the page beside the chat, or in a popup once the bundled command is applied. Pi's terminal UI shows both panels above the editor at once; that view is untested.
 - The interface text is Japanese. Reports are written in Japanese by default; `language` changes that.
 
 ## Install
@@ -53,7 +53,7 @@ The first report appears after 15 minutes of work, at the end of a turn. Reports
 /timeline now    Create a report for the work so far, then show them
 ```
 
-The page is written to `<working directory>/.pi/timeline/` after each turn. Open it in Pi Web's file preview to keep it beside the chat; it refreshes when the file changes.
+The page is written to `<working directory>/.pi/timeline/` after each turn. Open it in Pi Web's file preview to keep it beside the chat; it refreshes when the file changes. With the popup below, the `timeline` and `reports` buttons open it directly.
 
 <img src="docs/page.png" alt="The HTML page: a progress card and tasks with their results" width="420">
 
@@ -74,20 +74,26 @@ The file is `$PI_TODO_TIMELINE_CONFIG`, else `$XDG_CONFIG_HOME/pi-todo-timeline/
 | `todoTool` | `true` | Register the `todo` tool. |
 | `panel` | `true` | Show the panels. `panelMaxTasks` (`10`) limits the listed tasks. |
 | `page` | `true` | Write the page. `pageDirectory` (`.pi/timeline`) sets where. |
-| `panelMaxHeightPercent` | `50` | Panel height limit used by the command below. |
+| `webPopup` | `true` | Let the command below add the popup to Pi Web. |
+| `panelMaxHeightPercent` | `50` | Panel height limit, in percent of the window height, set by the command below. |
 
 Also available: `maxItemChars`, `maxLineChars`, `maxOutputTokens`, `timeoutSeconds`, and `focus`; see [src/config.ts](src/config.ts).
 
-### Panel height in Pi Web
+### Popup and panel height in Pi Web
 
-Pi Web limits extension panels to 144px. The bundled command appends one marked rule to Pi Web's CSS to raise the limit, and removes it again. It runs from a git install or a source checkout only; Node does not execute TypeScript files under `node_modules`, so an npm install cannot run it.
+Pi Web draws extension panels as colored text and limits them to 144px. A bundled command changes both by appending marked blocks to Pi Web's own files, and removes them again:
+
+- a script that opens the page in a popup when you click the `timeline` or `reports` button, in the colors of Pi Web's current theme;
+- a CSS rule that raises the panel height limit.
 
 ```sh
-node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts apply
-node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/web-css-cli.ts remove
+node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/pi-web-cli.ts apply
+node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/pi-web-cli.ts remove
 ```
 
-Reload the browser without cache afterwards. Updating Pi Web removes the rule, so apply it again. Pi Web is located by `--dir`, then `PI_WEB_DIR`, then npm's global directories.
+Reload the browser without cache afterwards. Click the same button again, or ×, to close the popup; Shift-click opens the text panel instead. The popup does not use Esc, which stops the running turn in Pi Web. `webPopup: false` leaves the script out.
+
+Updating Pi Web removes both blocks, so apply them again. The command runs from a git install or a source checkout only; Node does not execute TypeScript files under `node_modules`, so an npm install cannot run it. Pi Web is located by `--dir`, then `PI_WEB_DIR`, then npm's global directories.
 
 ## Limitations
 
@@ -95,7 +101,8 @@ Reload the browser without cache afterwards. Updating Pi Web removes the rule, s
 - A reply that is cut off or is not valid JSON is discarded, and the report is retried at a later turn. A reply that only breaks the size rules is repaired once.
 - Work shorter than the interval produces no report until you resume or run `/timeline now`.
 - A completed task cannot be reopened; it can only be deleted. Dependency cycles are not checked.
-- The panel height command is not available from an npm install.
+- The Pi Web command is not available from an npm install. The popup relies on Pi Web's page structure and file API, checked with Pi Web 0.15.0; if they change, the buttons open the text panels as before.
+- The popup looks for the page in `.pi/timeline` under the session's working directory, so it does not find a custom `pageDirectory`.
 - Pages are written per session and never deleted. In a git working tree the directory is added to `.git/info/exclude`, except in worktrees and subdirectories of a repository.
 - On Windows, model calls and the Pi Web views have not been run; unit tests, loading, panels, the page, and the height command have.
 
