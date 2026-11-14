@@ -61,10 +61,11 @@ function messageLines(message: Fields, maxChars: number): { lines: string[]; too
 	return { lines: [`ツールの結果 ${String(message.toolName)}${failed}: ${body}`], toolCalls: 0 };
 }
 
-function describeEntry(entry: unknown, maxChars: number): DeltaItem | undefined {
+/** afterTime 以前のエントリは、文に直す前に飛ばす（毎ターン全体をたどるため） */
+function describeEntry(entry: unknown, afterTime: number, maxChars: number): DeltaItem | undefined {
 	if (!isObject(entry) || typeof entry.timestamp !== "string") return undefined;
 	const time = Date.parse(entry.timestamp);
-	if (Number.isNaN(time)) return undefined;
+	if (Number.isNaN(time) || time <= afterTime) return undefined;
 	if (entry.type === "message" && isObject(entry.message)) return { time, ...messageLines(entry.message, maxChars) };
 	if (entry.type !== "custom_message") return undefined;
 	const body = clip(textOf(entry.content), maxChars);
@@ -74,8 +75,8 @@ function describeEntry(entry: unknown, maxChars: number): DeltaItem | undefined 
 function pendingItems(entries: Iterable<unknown>, afterTime: number, maxItemChars: number): DeltaItem[] {
 	const items: DeltaItem[] = [];
 	for (const entry of entries) {
-		const item = describeEntry(entry, maxItemChars);
-		if (item !== undefined && item.time > afterTime && item.lines.length > 0) items.push(item);
+		const item = describeEntry(entry, afterTime, maxItemChars);
+		if (item !== undefined && item.lines.length > 0) items.push(item);
 	}
 	return items;
 }
