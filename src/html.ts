@@ -1,7 +1,7 @@
 // タスクとレポートを1枚の HTML にする
 import { PAGE_SCRIPT, PAGE_STYLE } from "./html-style.ts";
 import type { Report } from "./records.ts";
-import { createClock, levelLabel } from "./view.ts";
+import { createClock, elapsedLabel, focusOf, levelLabel, topLevelReports } from "./view.ts";
 import type { TaskView } from "./view.ts";
 
 export interface PageInput {
@@ -25,19 +25,11 @@ const STATUS_TAGS = { completed: "完了", in_progress: "進行中" } as const;
 /** タスク名やレポートの文はモデルが書いたものなので、必ずこれを通してから HTML に入れる */
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (symbol) => ESCAPES[symbol]);
 
-function elapsedLabel(input: PageInput): string {
-	if (input.firstActivity === null || input.lastActivity === null) return "";
-	const minutes = Math.max(0, Math.round((input.lastActivity - input.firstActivity) / 60_000));
-	const hours = Math.floor(minutes / 60);
-	return hours > 0 ? `経過 ${hours}時間 ${minutes % 60}分` : `経過 ${minutes}分`;
-}
-
 function focusLine(tasks: readonly TaskView[]): string {
-	const active = tasks.find((task) => task.status === "in_progress");
-	const next = active ?? tasks.find((task) => task.status === "pending");
-	if (next === undefined) return "";
-	const doing = active?.activeForm ? `（${escapeHtml(active.activeForm)}）` : "";
-	return `<div class="now">${active === undefined ? "次" : "今"}: <b>#${next.id} ${escapeHtml(next.subject)}</b>${doing}</div>`;
+	const focus = focusOf(tasks);
+	if (focus === undefined) return "";
+	const doing = focus.active && focus.task.activeForm ? `（${escapeHtml(focus.task.activeForm)}）` : "";
+	return `<div class="now">${focus.active ? "今" : "次"}: <b>#${focus.task.id} ${escapeHtml(focus.task.subject)}</b>${doing}</div>`;
 }
 
 function badgeOf(tasks: readonly TaskView[], done: number): string {
@@ -51,7 +43,7 @@ function progressCard(input: PageInput, done: number): string {
 	return [
 		`<div class="card"><div class="progress-head"><span class="label">進捗</span>${badgeOf(input.tasks, done)}</div>`,
 		`<div class="bar-row"><div class="bar"><i class="done" style="width:${percent}%"></i></div><div class="percent">${percent}<small>%</small></div></div>`,
-		`<div class="progress-foot"><span>${input.tasks.length} 件中 ${done} 件が完了</span><span>${elapsedLabel(input)}</span></div>`,
+		`<div class="progress-foot"><span>${input.tasks.length} 件中 ${done} 件が完了</span><span>${elapsedLabel(input.firstActivity, input.lastActivity)}</span></div>`,
 		`${focusLine(input.tasks)}</div>`,
 	].join("");
 }
@@ -94,9 +86,7 @@ function reportArticle(report: Report, input: PageInput, clock: Clock): string {
 /** 束ねたレポートに含まれる基本のレポートは外に並べず、新しい順に出す */
 function reportsSection(input: PageInput, clock: Clock): string {
 	if (input.reports.length === 0) return '<p class="empty">レポートはまだありません</p>';
-	const bundled = new Set(input.reports.flatMap((report) => report.children));
-	const visible = input.reports.filter((report) => !bundled.has(report.id)).sort((left, right) => right.end - left.end || right.level - left.level);
-	return `<div class="reports">${visible.map((report) => reportArticle(report, input, clock)).join("")}</div>`;
+	return `<div class="reports">${topLevelReports(input.reports).map((report) => reportArticle(report, input, clock)).join("")}</div>`;
 }
 
 function tabs(input: PageInput, done: number): string {
