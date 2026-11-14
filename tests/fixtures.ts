@@ -1,4 +1,7 @@
 // テストで使うセッションのエントリの組み立て
+import type { Report } from "../src/records.ts";
+import type { TaskView } from "../src/view.ts";
+
 export const at = (clock: string): string => `2030-11-01T${clock}:00.000Z`;
 export const ms = (clock: string): number => Date.parse(at(clock));
 
@@ -16,6 +19,21 @@ export const toolResult = (clock: string, toolName: string, output: string, isEr
 	message: { role: "toolResult", toolCallId: "call", toolName, content: [{ type: "text", text: output }], isError },
 });
 export const custom = (clock: string, customType: string, data: unknown) => ({ ...base(clock), type: "custom", customType, data });
+
+/** 完了・進行中・未着手が1件ずつのタスク */
+export const sampleTasks: TaskView[] = [
+	{ id: 1, subject: "不具合を再現する", status: "completed", description: "失敗するテストを足した" },
+	{ id: 2, subject: "修正する", status: "in_progress", activeForm: "同期処理を修正中" },
+	{ id: 3, subject: "PR を作る", status: "pending" },
+];
+
+/** 進捗が1件だけの基本のレポート */
+export const baseReport = (id: string, start: string, end: string, first: string): Report =>
+	report({ id, start: ms(start), end: ms(end), createdAt: ms(end), summary: { progress: [first], uncertainties: [], userActions: [] } }) as Report;
+
+export const ESCAPE = String.fromCharCode(27);
+/** 色の指定を取り除いた行 */
+export const plain = (lines: readonly string[]): string[] => lines.map((line) => line.replaceAll(new RegExp(`${ESCAPE}\\[[0-9;]*m`, "g"), ""));
 
 /** メモリの上の偽のファイル。failure を入れると、書き込みがその例外で失敗する */
 export function fakeFiles(initial: Record<string, string> = {}) {

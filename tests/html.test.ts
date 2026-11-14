@@ -2,16 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { renderPage } from "../src/html.ts";
 import type { Report } from "../src/records.ts";
-import type { TaskView } from "../src/view.ts";
-import { ms, report } from "./fixtures.ts";
+import { baseReport, ms, report, sampleTasks } from "./fixtures.ts";
 
-const tasks: TaskView[] = [
-	{ id: 1, subject: "不具合を再現する", status: "completed", description: "失敗するテストを足した" },
-	{ id: 2, subject: "修正する", status: "in_progress", activeForm: "同期処理を修正中" },
-	{ id: 3, subject: "PR を作る", status: "pending" },
-];
-const base = (id: string, start: string, end: string, first: string) =>
-	report({ id, start: ms(start), end: ms(end), createdAt: ms(end), summary: { progress: [first], uncertainties: [], userActions: [] } }) as Report;
+const tasks = sampleTasks;
+const base = baseReport;
 const input = (overrides: Record<string, unknown> = {}) => ({
 	title: "同期の不具合",
 	tasks,

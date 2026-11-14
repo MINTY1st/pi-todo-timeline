@@ -34,6 +34,13 @@ test("ページは既定で書き出し、置き場は .pi/timeline。切るこ�
 	assert.deepEqual([custom.page, custom.pageDirectory], [false, "/shared/pages"]);
 });
 
+test("パネルは既定で出し、並べるタスクは10件まで。切ることも、件数を変えることもできる", () => {
+	const defaults = resolveConfig({}).config;
+	assert.deepEqual([defaults.panel, defaults.panelMaxTasks], [true, 10]);
+	const custom = resolveConfig({ panel: false, panelMaxTasks: 5 }).config;
+	assert.deepEqual([custom.panel, custom.panelMaxTasks], [false, 5]);
+});
+
 test("思考の強さは書かれていればそのまま使い、無ければ指定しない", () => {
 	assert.equal(resolveConfig({}).config.reasoning, undefined);
 	assert.equal(resolveConfig({ reasoning: "low" }).config.reasoning, "low");
