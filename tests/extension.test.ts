@@ -213,6 +213,17 @@ test("モデルの返答に文が無ければ、直しを頼まず、記録も�
 	assert.match(pi.notices.at(-1) ?? "", /モデルの返答に文がありません（length）/);
 });
 
+test("出力の上限で途中で切れた返答は、文があっても失敗にし、上限を上げるよう知らせる", async () => {
+	const pi = setup();
+	pi.setRespond(async () => ({ role: "assistant", stopReason: "length", content: [{ type: "text", text: '{"progress":["途中まで' }] }));
+	pi.turnEnd();
+	await flush();
+	assert.equal(pi.calls.length, 1);
+	assert.equal(pi.reports().length, 0);
+	await pi.command();
+	assert.match(pi.notices.at(-1) ?? "", /出力の上限に達して途中で切れました。maxOutputTokens を上げるか、reasoning を下げてください/);
+});
+
 test("/timeline は、タスクとレポートをまとめて表示する", async () => {
 	const pi = setup();
 	pi.branch.push(custom("10:04", "rpiv-todo-state", { tasks: [{ id: 1, subject: "不具合を直す", status: "completed", description: "51 件が合格" }], nextId: 2 }));

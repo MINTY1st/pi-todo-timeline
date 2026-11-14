@@ -15,6 +15,15 @@ export interface ModelRequest {
 	user: string;
 }
 
+/** 要約として読めなかった。repairable が false なら、元の中身が無いので直しを頼んでも意味が無い */
+export class SummaryFormatError extends Error {
+	readonly repairable: boolean;
+	constructor(message: string, repairable: boolean) {
+		super(message);
+		this.repairable = repairable;
+	}
+}
+
 const PROGRESS_RANGE = { min: 1, max: 4 };
 const OPTIONAL_MAX = 2;
 
@@ -72,21 +81,21 @@ function readObject(text: string): Record<string, unknown> {
 	try {
 		parsed = JSON.parse(from >= 0 && to > from ? unfenced.slice(from, to + 1) : unfenced);
 	} catch {
-		throw new Error("JSON として読めない");
+		throw new SummaryFormatError("JSON として読めない", false);
 	}
-	if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new Error("JSON のオブジェクトではない");
+	if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) throw new SummaryFormatError("JSON のオブジェクトではない", false);
 	return parsed as Record<string, unknown>;
 }
 
 function readLines(value: unknown, name: string, range: { min: number; max: number }, maxLineChars: number): string[] {
 	const list = value ?? [];
 	if (!Array.isArray(list) || list.length < range.min || list.length > range.max) {
-		throw new Error(range.min > 0 ? `${name} は ${range.min}〜${range.max} 件` : `${name} は ${range.max} 件まで`);
+		throw new SummaryFormatError(range.min > 0 ? `${name} は ${range.min}〜${range.max} 件` : `${name} は ${range.max} 件まで`, true);
 	}
 	return list.map((item, index) => {
-		if (typeof item !== "string") throw new Error(`${name}[${index}] は文字列`);
+		if (typeof item !== "string") throw new SummaryFormatError(`${name}[${index}] は文字列`, true);
 		const line = item.replace(/`/g, "").replace(/\s+/g, " ").trim();
-		if (line === "" || line.length > maxLineChars) throw new Error(`${name}[${index}] は 1〜${maxLineChars} 字`);
+		if (line === "" || line.length > maxLineChars) throw new SummaryFormatError(`${name}[${index}] は 1〜${maxLineChars} 字`, true);
 		return line;
 	});
 }

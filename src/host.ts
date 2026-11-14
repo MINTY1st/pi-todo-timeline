@@ -71,5 +71,6 @@ export async function completeText(registry: ModelRegistryLike, model: object, r
 	const text = response.content.filter(isTextBlock).map((block) => block.text).join("");
 	// 中身の無い返答を直しに回すと、中身の無いレポートができるので、ここで失敗にする
 	if (text.trim() === "") throw new Error(`モデルの返答に文がありません（${response.stopReason}）`);
+	if (response.stopReason === "length") throw new Error("モデルの返答が出力の上限に達して途中で切れました。maxOutputTokens を上げるか、reasoning を下げてください");
 	return text;
 }

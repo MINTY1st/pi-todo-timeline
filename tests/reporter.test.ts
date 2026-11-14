@@ -95,11 +95,19 @@ test("返答が決まりに合わなければ、理由を付けて1回だけ直�
 });
 
 test("直しても決まりに合わなければ、レポートを作らず理由を返す", async () => {
-	const model = fakeModel(["JSON ではない", "まだ違う"], "10:15");
+	const model = fakeModel([JSON.stringify({ progress: [] }), JSON.stringify({ progress: [] })], "10:15");
 	const result = await run(session(), model);
 	assert.deepEqual(result.reports, []);
-	assert.match(result.error ?? "", /JSON/);
+	assert.match(result.error ?? "", /progress は 1〜4 件/);
 	assert.equal(model.requests.length, 2);
+});
+
+test("JSON として読めない返答は、直しを頼まず失敗にする（元の中身が無いのに直させると、中身の無いレポートができる）", async () => {
+	const model = fakeModel(['{"progress":["途中で切れ'], "10:15");
+	const result = await run(session(), model);
+	assert.deepEqual(result.reports, []);
+	assert.match(result.error ?? "", /JSON として読めない/);
+	assert.equal(model.requests.length, 1);
 });
 
 test("基本のレポートを足した結果、束ねる期限が来ていれば、続けて束ねたレポートを作る", async () => {

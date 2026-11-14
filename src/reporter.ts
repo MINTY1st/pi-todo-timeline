@@ -1,7 +1,7 @@
 // 期限の来たレポートを作る
 import type { TimelineConfig } from "./config.ts";
 import { collectDelta } from "./delta.ts";
-import { buildBaseRequest, buildRepairRequest, buildRollupRequest, parseSummary } from "./prompt.ts";
+import { buildBaseRequest, buildRepairRequest, buildRollupRequest, parseSummary, SummaryFormatError } from "./prompt.ts";
 import type { ModelRequest, PromptSettings } from "./prompt.ts";
 import { reportsFromBranch } from "./records.ts";
 import type { Report, Summary } from "./records.ts";
@@ -35,13 +35,17 @@ interface Work {
 	signal: AbortSignal;
 }
 
-/** 返答を要約として読む。決まりに合わなければ、理由を付けて1回だけ直しを頼む */
+/**
+ * 返答を要約として読む。件数や長さの決まりに合わなければ、理由を付けて1回だけ直しを頼む。
+ * JSON として読めない返答は直しに回さない（元の中身が無いのに直させると、中身の無いレポートができる）。
+ */
 async function summarize(request: ModelRequest, work: Work): Promise<Summary> {
 	const draft = await work.dependencies.complete(request, work.signal);
 	try {
 		return parseSummary(draft, work.settings.maxLineChars);
 	} catch (error) {
-		const repair = buildRepairRequest({ draft, issue: (error as Error).message, settings: work.settings });
+		if (!(error instanceof SummaryFormatError) || !error.repairable) throw error;
+		const repair = buildRepairRequest({ draft, issue: error.message, settings: work.settings });
 		return parseSummary(await work.dependencies.complete(repair, work.signal), work.settings.maxLineChars);
 	}
 }
