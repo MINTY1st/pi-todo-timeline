@@ -56,9 +56,9 @@ test("設定がオブジェクトでなければ、既定値を使って知ら�
 });
 
 test("設定ファイルの場所は、専用の環境変数、XDG_CONFIG_HOME、ホームの順に決める", () => {
-	assert.equal(configPath({ PI_TIMELINE_CONFIG: "/x/custom.json", XDG_CONFIG_HOME: "/xdg", HOME: "/home/u" }), "/x/custom.json");
-	assert.equal(configPath({ XDG_CONFIG_HOME: "/xdg", HOME: "/home/u" }), "/xdg/pi-timeline/config.json");
-	assert.equal(configPath({ HOME: "/home/u" }), "/home/u/.config/pi-timeline/config.json");
+	assert.equal(configPath({ PI_TODO_TIMELINE_CONFIG: "/x/custom.json", XDG_CONFIG_HOME: "/xdg", HOME: "/home/u" }), "/x/custom.json");
+	assert.equal(configPath({ XDG_CONFIG_HOME: "/xdg", HOME: "/home/u" }), "/xdg/pi-todo-timeline/config.json");
+	assert.equal(configPath({ HOME: "/home/u" }), "/home/u/.config/pi-todo-timeline/config.json");
 });
 
 test("設定ファイルが無ければ既定値、壊れていれば既定値を使って知らせる", () => {
