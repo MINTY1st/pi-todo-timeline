@@ -28,7 +28,9 @@ export interface TimelineConfig {
 	/** 入力欄の上に、色つきの文字のパネルを出す */
 	panel: boolean;
 	panelMaxTasks: number;
-	/** Pi Web のパネルの高さの上限を、画面の高さの何 % にするか（上書きのコマンドが使う） */
+	/** Pi Web で、timeline と reports のボタンから HTML のページの小窓を開く（Pi Web に当てるコマンドが使う） */
+	webPopup: boolean;
+	/** Pi Web のパネルの高さの上限を、画面の高さの何 % にするか（Pi Web に当てるコマンドが使う） */
 	panelMaxHeightPercent: number;
 }
 
@@ -113,6 +115,7 @@ export function resolveConfig(raw: unknown): LoadedConfig {
 		panel: reader.flag("panel", true),
 		panelMaxTasks: reader.count("panelMaxTasks"),
 		panelMaxHeightPercent: reader.count("panelMaxHeightPercent"),
+		webPopup: reader.flag("webPopup", true),
 		pageDirectory: texts.pageDirectory ?? DEFAULT_PAGE_DIRECTORY,
 	};
 	return { config, problems };
