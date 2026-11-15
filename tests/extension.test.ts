@@ -570,16 +570,17 @@ test("todoTool を切ってあれば、ツールを登録しない（別の拡�
 	assert.equal(setup({ provider: "p", model: "m", todoTool: false }).tool(), undefined);
 });
 
-const PI_WEB = "/web";
-const PI_WEB_CSS = "/web/.next/static/css/main.css";
-const PI_WEB_LAYOUT = "/web/.next/static/chunks/app/layout-abc.js";
+// Windows では絶対パスにドライブが付くので、拡張が組み立てるパスと同じ形にそろえる
+const PI_WEB = absolute("/web");
+const PI_WEB_CSS = absolute("/web/.next/static/css/main.css");
+const PI_WEB_LAYOUT = absolute("/web/.next/static/chunks/app/layout-abc.js");
 const PANEL_CSS = ".extension-widget-panels{max-height:min(144px,18dvh)}";
 const LAYOUT_CHUNK = "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[7177],{}]);";
 
 /** Pi Web の中で動いている拡張。Pi Web の置き場に、パネルの CSS と画面の共通部分のチャンクがある */
 function insidePiWeb(rawConfig: unknown = { provider: "p", model: "m" }) {
-	const pi = setup(rawConfig, "10:15", absolute(PI_WEB));
-	pi.files.put("/web/package.json", JSON.stringify({ name: "@agegr/pi-web", version: "0.15.0" }));
+	const pi = setup(rawConfig, "10:15", PI_WEB);
+	pi.files.put(absolute("/web/package.json"), JSON.stringify({ name: "@agegr/pi-web", version: "0.15.0" }));
 	pi.files.put(PI_WEB_CSS, PANEL_CSS);
 	pi.files.put(PI_WEB_LAYOUT, LAYOUT_CHUNK);
 	return pi;
@@ -617,7 +618,7 @@ test("Pi Web のファイルに書けなくても、ページは書き、理由�
 	const pi = insidePiWeb();
 	const write = pi.files.write;
 	pi.files.write = (path: string, content: string) => {
-		if (path.startsWith(native(absolute(PI_WEB)))) throw new Error("EACCES: permission denied");
+		if (path.startsWith(PI_WEB)) throw new Error("EACCES: permission denied");
 		write(path, content);
 	};
 	await pi.sessionStart();
@@ -629,7 +630,7 @@ test("Pi Web のファイルに書けなくても、ページは書き、理由�
 
 test("小窓を足す先が無ければ、高さの上書きは当て、理由だけを1度だけ知らせる", async () => {
 	const pi = insidePiWeb();
-	pi.files.stored.delete(native(PI_WEB_LAYOUT));
+	pi.files.stored.delete(PI_WEB_LAYOUT);
 	await pi.sessionStart();
 	await pi.sessionStart();
 	assert.match(pi.files.at(PI_WEB_CSS) ?? "", /max-height:50dvh/);
