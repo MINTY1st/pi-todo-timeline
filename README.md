@@ -10,8 +10,6 @@ A [Pi](https://pi.dev) extension that keeps a task list and timed progress repor
 - **Reports**: while work continues, a separate model call summarizes every 15 minutes what changed, what is undecided, and what you can do in parallel. Hourly reports combine them.
 - **Views**: two panels above the editor, one HTML page per session, and the `/timeline` command.
 
-Tasks stay where you always see them and reports where you go to read them, as in the Timeline plugin of DeepSeek Harness.
-
 <img src="docs/tasks.png" alt="The tasks side of the page: a progress card, the current task, and numbered tasks with their results" width="400"> <img src="docs/reports.png" alt="The reports side of the page: the latest report with open questions and suggested actions, then earlier reports" width="400">
 
 The page for one session, as the `timeline` and `reports` buttons open it in Pi Web. The panels show the same content as colored text.
@@ -21,7 +19,7 @@ The page for one session, as the `timeline` and `reports` buttons open it in Pi 
 - Node.js 24.21 or later and Pi 1.5 or later.
 - Linux or Windows. Tested on WSL2 and on Windows 11 with Pi 1.5.2; macOS is untested.
 - A model for reports is optional. Without one, tasks, panels, and the page still work.
-- [Pi Web](https://github.com/agegr/pi-web) is optional. It shows each panel behind a button and previews the page beside the chat, or in a popup once the bundled command is applied. Pi's terminal UI shows both panels above the editor at once; that view is untested.
+- [Pi Web](https://github.com/agegr/pi-web) is optional. It shows each panel behind a button and previews the page beside the chat, or in a popup once the bundled command is applied. Pi's terminal UI shows both panels above the editor at once and cuts them off when they are long.
 - The interface text is Japanese. Reports are written in Japanese by default; `language` changes that.
 
 ## Install
@@ -129,8 +127,6 @@ and enter `publish.yml` as the workflow filename. Leave the environment name emp
 
 Only stable versions are supported. Existing npm versions cannot be overwritten.
 
-## Credits and license
-
-- [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness), Timeline plugin — the report format and writing rules, and the idea of timed reports that roll up.
+## License
 
 Licensed under [MIT](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) for the notices of the works this package draws on.
