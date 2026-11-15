@@ -55,6 +55,11 @@ test("todo ツールは既定で登録し、切ることもできる", () => {
 	assert.equal(resolveConfig({ todoTool: false }).config.todoTool, false);
 });
 
+test("小窓は既定で使い、切ることもできる", () => {
+	assert.equal(resolveConfig({}).config.webPopup, true);
+	assert.equal(resolveConfig({ webPopup: false }).config.webPopup, false);
+});
+
 test("思考の強さは書かれていればそのまま使い、無ければ指定しない", () => {
 	assert.equal(resolveConfig({}).config.reasoning, undefined);
 	assert.equal(resolveConfig({ reasoning: "low" }).config.reasoning, "low");
