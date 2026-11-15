@@ -1,5 +1,5 @@
 // レポートの型と、セッションの記録からの復元
-import { isObject } from "./shared.ts";
+import { isObject } from "../core/shared.ts";
 
 /** セッションに残す記録の種類。拡張の名前を pi-todo-timeline に変える前の記録も読めるよう、変えない */
 export const REPORT_ENTRY_TYPE = "pi-timeline-report";

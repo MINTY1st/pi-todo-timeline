@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyTodo, emptyTodoState, stateFromBranch, TASKS_ENTRY_TYPE } from "../src/todo-state.ts";
-import type { TodoParams, TodoState } from "../src/todo-state.ts";
+import { applyTodo, emptyTodoState, stateFromBranch, TASKS_ENTRY_TYPE } from "../src/todo/state.ts";
+import type { TodoParams, TodoState } from "../src/todo/state.ts";
 import { custom, ESCAPE, ms } from "./fixtures.ts";
 
 /** 操作を順に当てた後の状態と、最後の操作の結果 */

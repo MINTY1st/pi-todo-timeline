@@ -2,10 +2,10 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { configPath, loadConfig } from "./config.ts";
-import { createFileAccess } from "./files.ts";
-import { cssDirectoryOf, patchPiWeb } from "./pi-web-sync.ts";
-import type { Action, PatchSettings } from "./pi-web-sync.ts";
+import { configPath, loadConfig } from "../core/config.ts";
+import { createFileAccess } from "../core/files.ts";
+import { cssDirectoryOf, patchPiWeb } from "./sync.ts";
+import type { Action, PatchSettings } from "./sync.ts";
 
 export interface CliContext extends PatchSettings {
 	environment: Record<string, string | undefined>;
@@ -14,7 +14,7 @@ export interface CliContext extends PatchSettings {
 }
 
 const USAGE = [
-	"使い方: node src/pi-web-cli.ts <apply|remove> [--dir <Pi Web のディレクトリ>]",
+	"使い方: node src/pi-web/cli.ts <apply|remove> [--dir <Pi Web のディレクトリ>]",
 	"  apply   パネルの高さの上限を設定の panelMaxHeightPercent にし、小窓のスクリプトを足す（設定の webPopup が false なら足さない）",
 	"  remove  足したものを外す",
 	"  Pi Web の場所は、--dir、環境変数 PI_WEB_DIR の順に決め、どちらも無ければ npm が全体に入れた場所を探す",

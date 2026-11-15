@@ -1,4 +1,4 @@
-import type { PatchTarget } from "./web-patch.ts";
+import type { PatchTarget } from "./patch.ts";
 
 // Pi Web の画面に足す、小窓のスクリプト。
 // 下の関数はブラウザの中で動く。buildPopupScript が関数の中身をそのまま文字にして並べるので、

@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import type { Report } from "../src/records.ts";
-import { periodLabel, renderTimeline, taskLines, tasksFromBranch } from "../src/view.ts";
+import { REPORT_ENTRY_TYPE } from "../src/report/records.ts";
+import type { Report } from "../src/report/records.ts";
+import { periodLabel } from "../src/core/shared.ts";
+import { taskLines, tasksFromBranch } from "../src/todo/tasks.ts";
+import { renderTimeline } from "../src/view/format.ts";
 import { custom, ms, report } from "./fixtures.ts";
 
 const tasks = [

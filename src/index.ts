@@ -2,9 +2,9 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { configPath, loadConfig } from "./config.ts";
+import { configPath, loadConfig } from "./core/config.ts";
 import { createExtension } from "./extension.ts";
-import { createFileAccess } from "./files.ts";
+import { createFileAccess } from "./core/files.ts";
 
 const configLocation = configPath(process.env, homedir());
 

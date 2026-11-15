@@ -1,8 +1,8 @@
 // 入力欄の上に出すパネル（色つきの文字の行）
-import type { Report } from "./records.ts";
-import { clip, withoutControls } from "./shared.ts";
-import { elapsedLabel, focusOf, reportHead, topLevelReports } from "./view.ts";
-import type { TaskView } from "./view.ts";
+import type { Report } from "../report/records.ts";
+import { clip, withoutControls } from "../core/shared.ts";
+import { elapsedLabel, focusOf, reportHead, topLevelReports } from "./format.ts";
+import type { TaskView } from "../todo/tasks.ts";
 
 export interface PanelInput {
 	tasks: readonly TaskView[];

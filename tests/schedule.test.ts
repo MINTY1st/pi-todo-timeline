@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isBaseDue, lastBaseEnd, rollupChildren } from "../src/schedule.ts";
-import type { Report } from "../src/records.ts";
+import { isBaseDue, lastBaseEnd, rollupChildren } from "../src/report/schedule.ts";
+import type { Report } from "../src/report/records.ts";
 import { ms, report } from "./fixtures.ts";
 
 const MINUTE = 60_000;

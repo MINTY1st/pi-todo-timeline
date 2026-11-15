@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveConfig } from "../src/config.ts";
+import { resolveConfig } from "../src/core/config.ts";
 import { createExtension } from "../src/extension.ts";
-import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import { TASKS_ENTRY_TYPE } from "../src/todo-state.ts";
+import { REPORT_ENTRY_TYPE } from "../src/report/records.ts";
+import { TASKS_ENTRY_TYPE } from "../src/todo/state.ts";
 import { absolute, at, custom, fakeFiles, ms, native, plain, session, user } from "./fixtures.ts";
 
 type Handler = (...values: unknown[]) => unknown;

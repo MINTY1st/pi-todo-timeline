@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createFileAccess } from "../src/files.ts";
+import { createFileAccess } from "../src/core/files.ts";
 
 test("無いファイルは undefined、書いたファイルは読める。途中のディレクトリは作る", () => {
 	const root = mkdtempSync(join(tmpdir(), "pi-timeline-"));

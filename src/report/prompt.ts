@@ -1,5 +1,6 @@
 // 要約を頼む文と、返ってきた要約の検証
 // 文体の決まりと JSON の形は、deepseek-ai/deepseek-harness の packages/experimental/timeline/src/prompt.ts（MIT）を元にした
+import type { ModelRequest } from "../core/host.ts";
 import type { Report, Summary } from "./records.ts";
 
 export interface PromptSettings {
@@ -8,11 +9,6 @@ export interface PromptSettings {
 	maxLineChars: number;
 	/** レポートで重く扱う点 */
 	focus: string;
-}
-
-export interface ModelRequest {
-	system: string;
-	user: string;
 }
 
 /** 要約として読めなかった。repairable が false なら、元の中身が無いので直しを頼んでも意味が無い */

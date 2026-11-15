@@ -4,7 +4,7 @@ No third-party source code is copied into this package. The works below shaped p
 
 ## DeepSeek Harness Timeline
 
-The report writing rules and JSON shape (`progress`, `uncertainties`, `userActions`) in `src/prompt.ts`, and the default `focus` text in `src/config.ts`, are adapted from `src/prompt.ts` and `src/defaults.ts` of `packages/experimental/timeline` in [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) (commit 39163dd, MIT). The idea of timed reports that roll up into longer ones comes from the same package.
+The report writing rules and JSON shape (`progress`, `uncertainties`, `userActions`) in `src/report/prompt.ts`, and the default `focus` text in `src/core/config.ts`, are adapted from `src/prompt.ts` and `src/defaults.ts` of `packages/experimental/timeline` in [deepseek-ai/deepseek-harness](https://github.com/deepseek-ai/deepseek-harness) (commit 39163dd, MIT). The idea of timed reports that roll up into longer ones comes from the same package.
 
 ```text
 MIT License
@@ -58,7 +58,7 @@ SOFTWARE.
 
 ## rpiv-todo
 
-The `todo` tool in `src/todo-state.ts` and `src/todo-tool.ts` uses the same action names, argument names, reply texts, status transitions, and record shape as [@juicesharp/rpiv-todo](https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo) (2.15.0, MIT), so that existing sessions and model habits carry over. Some of the instructions given to the model are rewritten from that package's text.
+The `todo` tool in `src/todo/state.ts` and `src/todo/tool.ts` uses the same action names, argument names, reply texts, status transitions, and record shape as [@juicesharp/rpiv-todo](https://github.com/juicesharp/rpiv-mono/tree/main/packages/rpiv-todo) (2.15.0, MIT), so that existing sessions and model habits carry over. Some of the instructions given to the model are rewritten from that package's text.
 
 ```text
 MIT License

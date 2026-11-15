@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { collectDelta } from "../src/delta.ts";
-import { REPORT_ENTRY_TYPE } from "../src/records.ts";
+import { collectDelta } from "../src/report/delta.ts";
+import { REPORT_ENTRY_TYPE } from "../src/report/records.ts";
 import { custom, ms, report, session, toolResult, user } from "./fixtures.ts";
 
 const limits = { maxChars: 10_000, maxItemChars: 200 };

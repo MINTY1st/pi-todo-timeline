@@ -16,3 +16,9 @@ export function clip(value: string, maxChars: number): string {
 	const flat = value.replace(/\s+/g, " ").trim();
 	return flat.length > maxChars ? `${flat.slice(0, maxChars)}…` : flat;
 }
+
+/** 間隔の呼び名（15分、1時間など） */
+export function periodLabel(periodMs: number): string {
+	const minutes = Math.round(periodMs / 60_000);
+	return minutes % 60 === 0 ? `${minutes / 60}時間` : `${minutes}分`;
+}

@@ -1,6 +1,6 @@
 // Pi Web の CSS に足す、パネルの高さの上書き
-import { applyPatch, patchText } from "./web-patch.ts";
-import type { PatchFiles, PatchOutcome, PatchTarget } from "./web-patch.ts";
+import { applyPatch, patchText } from "./patch.ts";
+import type { PatchFiles, PatchOutcome, PatchTarget } from "./patch.ts";
 
 export type CssFiles = PatchFiles;
 export type CssOutcome = PatchOutcome;

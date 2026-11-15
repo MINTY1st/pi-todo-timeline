@@ -1,8 +1,8 @@
 // Pi Web の中で動いているとき、セッションの始まりに Pi Web へ小窓と高さの上書きを当てる（利用者がコマンドを打たなくて済むように）
-import type { HostContext } from "./host.ts";
-import { isPiWeb, patchPiWeb, RELOAD_HINT } from "./pi-web-sync.ts";
-import { messageOf, settingsOf } from "./session.ts";
-import type { Session } from "./session.ts";
+import type { HostContext } from "../core/host.ts";
+import { isPiWeb, patchPiWeb, RELOAD_HINT } from "./sync.ts";
+import { messageOf, settingsOf } from "../core/session.ts";
+import type { Session } from "../core/session.ts";
 
 const UPDATED = `Pi Web に、タイムラインの小窓とパネルの高さの設定を当てました。${RELOAD_HINT}`;
 

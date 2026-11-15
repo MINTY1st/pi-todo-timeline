@@ -1,12 +1,7 @@
 // ページの置き場と書き出し
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { isObject } from "./shared.ts";
-
-export interface FileAccess {
-	/** ファイルの中身。無ければ undefined */
-	read(path: string): string | undefined;
-	write(path: string, content: string): void;
-}
+import type { FileAccess } from "../core/files.ts";
+import { isObject } from "../core/shared.ts";
 
 export interface PageLocation {
 	cwd: string;
