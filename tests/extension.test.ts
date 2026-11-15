@@ -626,3 +626,12 @@ test("Pi Web のファイルに書けなくても、ページは書き、理由�
 	assert.equal(piWebNotices(pi.notices).length, 1);
 	assert.match(piWebNotices(pi.notices)[0] ?? "", /EACCES/);
 });
+
+test("小窓を足す先が無ければ、高さの上書きは当て、理由だけを1度だけ知らせる", async () => {
+	const pi = insidePiWeb();
+	pi.files.stored.delete(native(PI_WEB_LAYOUT));
+	await pi.sessionStart();
+	await pi.sessionStart();
+	assert.match(pi.files.at(PI_WEB_CSS) ?? "", /max-height:50dvh/);
+	assert.deepEqual(piWebNotices(pi.notices), ["Pi Web に小窓を当てられませんでした（小窓のスクリプトを足す先がありません（Pi Web の画面の共通部分のチャンクが見つかりません））"]);
+});

@@ -55,12 +55,14 @@ function patchPopup(piWeb: string, action: Action, context: PatchSettings): { wa
 }
 
 /** 見つかった Pi Web に、高さの上書きと小窓のスクリプトを足す（外す） */
-export function patchPiWeb(piWeb: string, action: Action, context: PatchSettings): { exitCode: number; lines: string[] } {
+/** failure は、失敗したときの理由だけ（経過の行を含めない。同じ理由を何度も知らせないための鍵にもなる） */
+export function patchPiWeb(piWeb: string, action: Action, context: PatchSettings): { exitCode: number; lines: string[]; failure?: string } {
 	const percent = action === "apply" ? context.percent() : undefined;
 	const css = applyToDirectory(context.files, cssDirectoryOf(piWeb), percent === undefined ? undefined : buildRule(percent));
-	if (!css.ok) return { exitCode: 1, lines: [css.message] };
+	if (!css.ok) return { exitCode: 1, lines: [css.message], failure: css.message };
 	const popup = patchPopup(piWeb, action, context);
 	const changed = [css, popup.outcome].some((outcome) => outcome.ok && outcome.changed.length > 0);
 	const lines = [...reportCss(action, css, percent), ...reportPopup(popup.wanted, popup.outcome)];
-	return { exitCode: popup.wanted && !popup.outcome.ok ? 1 : 0, lines: changed ? [...lines, RELOAD_HINT] : lines };
+	const failed = popup.wanted && !popup.outcome.ok;
+	return { exitCode: failed ? 1 : 0, lines: changed ? [...lines, RELOAD_HINT] : lines, ...(failed ? { failure: POPUP_TARGET_MISSING } : {}) };
 }

@@ -19,7 +19,7 @@ export function syncPiWeb(session: Session, context: HostContext): void {
 	const { config } = settingsOf(session);
 	try {
 		const result = patchPiWeb(piWebDirectory, "apply", { files, percent: () => config.panelMaxHeightPercent, popup: () => config.webPopup });
-		if (result.exitCode !== 0) notifyOnce(session, context, `Pi Web に小窓を当てられませんでした: ${result.lines.join(" ")}`);
+		if (result.failure !== undefined) notifyOnce(session, context, `Pi Web に小窓を当てられませんでした（${result.failure}）`);
 		else if (result.lines.includes(RELOAD_HINT)) context.ui.notify(UPDATED, "info");
 	} catch (error) {
 		notifyOnce(session, context, `Pi Web のファイルに書けないため、小窓は使えません（${messageOf(error)}）`);
