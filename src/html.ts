@@ -51,7 +51,7 @@ function progressCard(input: PageInput, done: number): string {
 function taskItem(task: TaskView): string {
 	const detail = task.status === "completed" ? task.description : task.status === "in_progress" ? task.activeForm : undefined;
 	const result = detail && task.status !== "pending" ? `<div class="result"><span class="tag">${STATUS_TAGS[task.status]}</span>${escapeHtml(detail)}</div>` : "";
-	return `<li class="${task.status}"><span class="mark">${STATUS_MARKS[task.status]}</span><span class="title">${escapeHtml(task.subject)}</span>${result}</li>`;
+	return `<li class="${task.status}"><span class="mark">${STATUS_MARKS[task.status]}</span><span class="title"><span class="number">#${task.id}</span>${escapeHtml(task.subject)}</span>${result}</li>`;
 }
 
 function tasksSection(input: PageInput, done: number): string {

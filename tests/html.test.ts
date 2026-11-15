@@ -44,8 +44,14 @@ test("進行中のタスクがあれば「今」として、無ければ最初�
 	assert.match(renderPage(input({ tasks: [tasks[2]] })), /<span class="badge idle">未着手<\/span>/);
 });
 
-test("タスクは状態ごとの印を付け、完了には結果を、進行中には今の作業を添える", () => {
+test("タスクの名前の前に番号を付ける（進捗の「今: #2」が一覧のどれかを示す）", () => {
 	const page = renderPage(input());
+	const numbers = [...page.matchAll(/<span class="title"><span class="number">#(\d+)<\/span>/g)].map((match) => match[1]);
+	assert.deepEqual(numbers, tasks.map((task) => String(task.id)));
+});
+
+test("タスクは状態ごとの印を付け、完了には結果を、進行中には今の作業を添える", () => {
+	const page = renderPage(input()).replace(/<span class="number">#\d+<\/span>/g, "");
 	assert.match(page, /<li class="completed"><span class="mark">✓<\/span><span class="title">不具合を再現する<\/span><div class="result"><span class="tag">完了<\/span>失敗するテストを足した<\/div><\/li>/);
 	assert.match(page, /<li class="in_progress"><span class="mark">◐<\/span><span class="title">修正する<\/span><div class="result"><span class="tag">進行中<\/span>同期処理を修正中<\/div><\/li>/);
 	assert.match(page, /<li class="pending"><span class="mark">○<\/span><span class="title">PR を作る<\/span><\/li>/);
