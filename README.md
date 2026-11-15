@@ -12,8 +12,9 @@ A [Pi](https://pi.dev) extension that keeps a task list and timed progress repor
 
 Tasks stay where you always see them and reports where you go to read them, as in the Timeline plugin of DeepSeek Harness.
 
-<img src="docs/timeline.png" alt="The timeline panel: a progress bar, the current task, and tasks with their results" width="720">
-<img src="docs/reports.png" alt="The reports panel: the latest report with open questions and suggested actions, then earlier reports" width="720">
+<img src="docs/tasks.png" alt="The tasks side of the page: a progress card, the current task, and numbered tasks with their results" width="400"> <img src="docs/reports.png" alt="The reports side of the page: the latest report with open questions and suggested actions, then earlier reports" width="400">
+
+The page for one session, as the `timeline` and `reports` buttons open it in Pi Web. The panels show the same content as colored text.
 
 ## Requirements
 
@@ -54,8 +55,6 @@ The first report appears after 15 minutes of work, at the end of a turn. Reports
 ```
 
 The page is written to `<working directory>/.pi/timeline/` after each turn. Open it in Pi Web's file preview to keep it beside the chat; it refreshes when the file changes. With the popup below, the `timeline` and `reports` buttons open it directly.
-
-<img src="docs/page.png" alt="The HTML page: a progress card and tasks with their results" width="420">
 
 ## Configuration
 
