@@ -1,14 +1,14 @@
 // ページとパネルを、今のセッションの状態に合わせる
-import type { HostContext } from "./host.ts";
+import type { HostContext } from "../core/host.ts";
 import { renderPage } from "./html.ts";
 import { activitySpan, excludeFromGit, pagePath, publishPage } from "./page.ts";
 import { renderReportsPanel, renderTasksPanel } from "./panel.ts";
-import { reportsFromBranch } from "./records.ts";
-import type { Report } from "./records.ts";
-import { clockOf, messageOf, settingsOf } from "./session.ts";
-import type { Session } from "./session.ts";
-import { tasksFromBranch } from "./view.ts";
-import type { TaskView } from "./view.ts";
+import { reportsFromBranch } from "../report/records.ts";
+import type { Report } from "../report/records.ts";
+import { clockOf, messageOf, settingsOf } from "../core/session.ts";
+import type { Session } from "../core/session.ts";
+import { tasksFromBranch } from "./format.ts";
+import type { TaskView } from "./format.ts";
 
 /** パネルの名前。Pi Web では、この名前のボタンが画面の下に並び、押したものだけが開く */
 export const PANEL_KEYS = { tasks: "timeline", reports: "reports" } as const;

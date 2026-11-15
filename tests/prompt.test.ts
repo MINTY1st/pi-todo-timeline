@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildBaseRequest, buildRepairRequest, buildRollupRequest, parseSummary } from "../src/prompt.ts";
-import type { Report } from "../src/records.ts";
+import { buildBaseRequest, buildRepairRequest, buildRollupRequest, parseSummary } from "../src/report/prompt.ts";
+import type { Report } from "../src/report/records.ts";
 import { ms, report } from "./fixtures.ts";
 
 const summary = { progress: ["備考が消える不具合を直した", "単体テスト 51 件が合格"], uncertainties: ["旧形式の行を移すか未定"], userActions: [] };

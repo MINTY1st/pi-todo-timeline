@@ -1,9 +1,9 @@
 // Pi Web の配布物に、パネルの高さの上書きと小窓のスクリプトを足す・外す。コマンドと、Pi Web の中で動く拡張の両方が使う
 import { join } from "node:path";
-import { applyToDirectory, buildRule } from "./web-css.ts";
-import { applyPatch } from "./web-patch.ts";
-import type { PatchFiles, PatchOutcome } from "./web-patch.ts";
-import { buildPopupScript, LAYOUT_TARGET } from "./web-popup.ts";
+import { applyToDirectory, buildRule } from "./css.ts";
+import { applyPatch } from "./patch.ts";
+import type { PatchFiles, PatchOutcome } from "./patch.ts";
+import { buildPopupScript, LAYOUT_TARGET } from "./popup.ts";
 
 export type Action = "apply" | "remove";
 

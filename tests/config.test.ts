@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { configPath, loadConfig, resolveConfig } from "../src/config.ts";
+import { configPath, loadConfig, resolveConfig } from "../src/core/config.ts";
 import { native } from "./fixtures.ts";
 
 test("何も書かれていなければ既定値を使い、モデルは未設定のままにする", () => {

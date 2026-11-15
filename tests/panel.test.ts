@@ -1,8 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderReportsPanel, renderTasksPanel } from "../src/panel.ts";
-import type { Report } from "../src/records.ts";
-import type { TaskView } from "../src/view.ts";
+import { renderReportsPanel, renderTasksPanel } from "../src/view/panel.ts";
+import type { Report } from "../src/report/records.ts";
+import type { TaskView } from "../src/view/format.ts";
 import { baseReport, ESCAPE, ms, plain, report, sampleTasks } from "./fixtures.ts";
 
 const colored = (code: number, text: string) => `${ESCAPE}[${code}m${text}${ESCAPE}[0m`;

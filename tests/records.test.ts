@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isReport, REPORT_ENTRY_TYPE, reportsFromBranch } from "../src/records.ts";
+import { isReport, REPORT_ENTRY_TYPE, reportsFromBranch } from "../src/report/records.ts";
 import { custom, report, user } from "./fixtures.ts";
 
 test("レポートの形を満たすデータだけをレポートと認める", () => {

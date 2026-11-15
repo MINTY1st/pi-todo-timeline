@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveConfig } from "../src/config.ts";
-import type { ModelRequest } from "../src/prompt.ts";
-import { REPORT_ENTRY_TYPE } from "../src/records.ts";
-import { produceReports } from "../src/reporter.ts";
+import { resolveConfig } from "../src/core/config.ts";
+import type { ModelRequest } from "../src/report/prompt.ts";
+import { REPORT_ENTRY_TYPE } from "../src/report/records.ts";
+import { produceReports } from "../src/report/reporter.ts";
 import { assistant, custom, ms, report, session, text, toolCall, user } from "./fixtures.ts";
 
 const config = resolveConfig({ provider: "p", model: "m" }).config;

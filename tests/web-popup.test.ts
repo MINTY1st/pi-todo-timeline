@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { apiPath, buildPopupScript, isLayoutChunk, LAYOUT_TARGET, pageNameFor, sessionIdFrom, tabForClick, withPageOptions } from "../src/web-popup.ts";
-import { applyPatch } from "../src/web-patch.ts";
+import { apiPath, buildPopupScript, isLayoutChunk, LAYOUT_TARGET, pageNameFor, sessionIdFrom, tabForClick, withPageOptions } from "../src/pi-web/popup.ts";
+import { applyPatch } from "../src/pi-web/patch.ts";
 import { fakeFiles, native } from "./fixtures.ts";
 
 const SESSION = "01a1d8af-9c88-723c-8893-0ad7d50d7bea";

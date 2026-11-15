@@ -1,8 +1,8 @@
 // タスクとレポートを1枚の HTML にする
 import { PAGE_SCRIPT, PAGE_STYLE } from "./html-style.ts";
-import type { Report } from "./records.ts";
-import { createClock, elapsedLabel, focusOf, levelLabel, topLevelReports } from "./view.ts";
-import type { TaskView } from "./view.ts";
+import type { Report } from "../report/records.ts";
+import { createClock, elapsedLabel, focusOf, levelLabel, topLevelReports } from "./format.ts";
+import type { TaskView } from "./format.ts";
 
 export interface PageInput {
 	/** 見出しの下に出す題名（セッションの名前など） */

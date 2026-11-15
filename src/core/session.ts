@@ -1,8 +1,8 @@
 // 1つのセッションの間、持ち続ける状態
-import type { ExtensionOptions } from "./extension.ts";
+import type { ExtensionOptions } from "../extension.ts";
 import type { LoadedConfig } from "./config.ts";
 import type { TimelineHost } from "./host.ts";
-import { periodLabel } from "./view.ts";
+import { periodLabel } from "../view/format.ts";
 
 export interface Session {
 	options: ExtensionOptions;

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { run } from "../src/pi-web-cli.ts";
+import { run } from "../src/pi-web/cli.ts";
 import { fakeFiles, native } from "./fixtures.ts";
 
 const ORIGINAL = ".extension-widget-panels{max-height:min(144px,18dvh)}";

@@ -1,8 +1,8 @@
 // /timeline の文字の表示と、表示するタスクの読み取り
-import type { Report } from "./records.ts";
-import { clip } from "./shared.ts";
-import { stateFromBranch } from "./todo-state.ts";
-import type { Task } from "./todo-state.ts";
+import type { Report } from "../report/records.ts";
+import { clip } from "../core/shared.ts";
+import { stateFromBranch } from "../todo/state.ts";
+import type { Task } from "../todo/state.ts";
 
 /** 表示するタスク。消したものは含めない */
 export type TaskView = Task & { status: "pending" | "in_progress" | "completed" };

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderPage } from "../src/html.ts";
-import type { Report } from "../src/records.ts";
+import { renderPage } from "../src/view/html.ts";
+import type { Report } from "../src/report/records.ts";
 import { baseReport, ms, report, sampleTasks } from "./fixtures.ts";
 
 const tasks = sampleTasks;

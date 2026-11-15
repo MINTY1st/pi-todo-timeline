@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyToDirectory, buildRule, patchCss } from "../src/web-css.ts";
+import { applyToDirectory, buildRule, patchCss } from "../src/pi-web/css.ts";
 import { fakeFiles, native } from "./fixtures.ts";
 
 const START = "/* pi-todo-timeline:start */";

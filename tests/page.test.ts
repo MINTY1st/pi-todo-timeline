@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { activitySpan, excludeFromGit, pagePath, publishPage } from "../src/page.ts";
+import { activitySpan, excludeFromGit, pagePath, publishPage } from "../src/view/page.ts";
 import { absolute, custom, fakeFiles, ms, session } from "./fixtures.ts";
 
 const location = { cwd: "/work/app", directory: ".pi/timeline", sessionId: "01a1d8af-9c88-723c-8893-0ad7d50d7bea", startedAt: ms("10:00"), timeZone: "UTC" };

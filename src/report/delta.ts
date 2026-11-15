@@ -1,6 +1,6 @@
 // 前回のレポートより後のセッションの記録を、要約に渡す文に直す
-import { clip, isObject } from "./shared.ts";
-import type { Fields } from "./shared.ts";
+import { clip, isObject } from "../core/shared.ts";
+import type { Fields } from "../core/shared.ts";
 
 export interface DeltaLimits {
 	/** 1回の要約に渡す文字数の上限。超えた分は次回に持ち越す */

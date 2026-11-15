@@ -1,6 +1,6 @@
 // ページの置き場と書き出し
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { isObject } from "./shared.ts";
+import { isObject } from "../core/shared.ts";
 
 export interface FileAccess {
 	/** ファイルの中身。無ければ undefined */

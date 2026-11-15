@@ -2,10 +2,10 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { configPath, loadConfig } from "./config.ts";
-import { createFileAccess } from "./files.ts";
-import { cssDirectoryOf, patchPiWeb } from "./pi-web-sync.ts";
-import type { Action, PatchSettings } from "./pi-web-sync.ts";
+import { configPath, loadConfig } from "../core/config.ts";
+import { createFileAccess } from "../core/files.ts";
+import { cssDirectoryOf, patchPiWeb } from "./sync.ts";
+import type { Action, PatchSettings } from "./sync.ts";
 
 export interface CliContext extends PatchSettings {
 	environment: Record<string, string | undefined>;

@@ -1,11 +1,11 @@
 // todo ツールの定義。名前と引数の形は @juicesharp/rpiv-todo（MIT）と同じにしてある
-import type { HostContext, ToolDefinition, ToolResult } from "./host.ts";
-import { settingsOf } from "./session.ts";
-import type { Session } from "./session.ts";
-import { isObject } from "./shared.ts";
-import { applyTodo, stateFromBranch, TASKS_ENTRY_TYPE } from "./todo-state.ts";
-import type { TodoParams } from "./todo-state.ts";
-import { refreshViews } from "./views.ts";
+import type { HostContext, ToolDefinition, ToolResult } from "../core/host.ts";
+import { settingsOf } from "../core/session.ts";
+import type { Session } from "../core/session.ts";
+import { isObject } from "../core/shared.ts";
+import { applyTodo, stateFromBranch, TASKS_ENTRY_TYPE } from "./state.ts";
+import type { TodoParams } from "./state.ts";
+import { refreshViews } from "../view/refresh.ts";
 
 export const TODO_TOOL_NAME = "todo";
 

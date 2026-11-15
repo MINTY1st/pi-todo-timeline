@@ -1,7 +1,7 @@
 // 実際のファイルの読み書き
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import type { FileAccess } from "./page.ts";
+import type { FileAccess } from "../view/page.ts";
 
 const isMissing = (error: unknown): boolean => {
 	// ENOTDIR は、途中がファイルで辿れないとき（git の worktree では .git がファイル）

@@ -1,6 +1,6 @@
 // タスクの状態と、todo ツールの操作の適用
 // 操作の種類・引数・応答の文・状態の移り変わりの決まりは、@juicesharp/rpiv-todo（MIT）と同じにしてある（モデルの使い方と、前の記録を引き継ぐため）
-import { isObject, withoutControls } from "./shared.ts";
+import { isObject, withoutControls } from "../core/shared.ts";
 
 export type TaskStatus = "pending" | "in_progress" | "completed" | "deleted";
 

@@ -1,12 +1,12 @@
 // 期限の来たレポートを作る
-import type { TimelineConfig } from "./config.ts";
+import type { TimelineConfig } from "../core/config.ts";
 import { collectDelta } from "./delta.ts";
 import { buildBaseRequest, buildRepairRequest, buildRollupRequest, parseSummary, SummaryFormatError } from "./prompt.ts";
 import type { ModelRequest, PromptSettings } from "./prompt.ts";
 import { reportsFromBranch } from "./records.ts";
 import type { Report, Summary } from "./records.ts";
 import { isBaseDue, lastBaseEnd, rollupChildren } from "./schedule.ts";
-import { taskLines, tasksFromBranch } from "./view.ts";
+import { taskLines, tasksFromBranch } from "../view/format.ts";
 
 export interface ReporterDependencies {
 	/** モデルに依頼を送り、返答の文を返す */
