@@ -32,6 +32,7 @@ h1 { font-size:17px; font-weight:650; }
 .tasks li:last-child { border-bottom:none; }
 .completed .mark, .completed .tag { color:var(--done); } .in_progress .mark, .in_progress .tag { color:var(--accent); } .pending .mark { color:var(--dim); }
 .title { font-weight:550; } .pending .title { color:var(--muted); font-weight:450; }
+.number { color:var(--dim); font-weight:450; font-variant-numeric:tabular-nums; margin-right:6px; }
 .result { grid-column:2; color:var(--muted); font-size:12.5px; margin-top:2px; }
 .tag { font-size:10.5px; border-radius:4px; padding:0 5px; margin-right:6px; border:1px solid currentColor; }
 .reports { position:relative; margin-left:6px; padding-left:22px; border-left:2px solid var(--line); }
