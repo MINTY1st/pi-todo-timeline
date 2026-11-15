@@ -2,7 +2,7 @@
 import type { Report } from "../report/records.ts";
 import { clip, withoutControls } from "../core/shared.ts";
 import { elapsedLabel, focusOf, reportHead, topLevelReports } from "./format.ts";
-import type { TaskView } from "./format.ts";
+import type { TaskView } from "../todo/tasks.ts";
 
 export interface PanelInput {
 	tasks: readonly TaskView[];

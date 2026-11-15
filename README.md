@@ -78,7 +78,7 @@ The file is `$PI_TODO_TIMELINE_CONFIG`, else `$XDG_CONFIG_HOME/pi-todo-timeline/
 | `webPopup` | `true` | Add the popup to Pi Web, as described below. |
 | `panelMaxHeightPercent` | `50` | Panel height limit, in percent of the window height, in Pi Web. |
 
-Also available: `maxItemChars`, `maxLineChars`, `maxOutputTokens`, `timeoutSeconds`, and `focus`; see [src/config.ts](src/config.ts).
+Also available: `maxItemChars`, `maxLineChars`, `maxOutputTokens`, `timeoutSeconds`, and `focus`; see [src/core/config.ts](src/core/config.ts).
 
 ### Popup and panel height in Pi Web
 
@@ -94,7 +94,7 @@ Click the same button again, or ×, to close the popup; Shift-click opens the te
 To remove both blocks after uninstalling, update Pi Web, or run the bundled command from a git install or a source checkout (Node does not execute TypeScript files under `node_modules`):
 
 ```sh
-node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/pi-web-cli.ts remove
+node ~/.pi/agent/git/github.com/MINTY1st/pi-todo-timeline/src/pi-web/cli.ts remove
 ```
 
 ## Limitations

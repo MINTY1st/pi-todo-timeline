@@ -1,6 +1,11 @@
 // pi のうち、この拡張が使う部分の型と、モデルの呼び出し
 import type { TimelineConfig } from "./config.ts";
-import type { ModelRequest } from "../report/prompt.ts";
+
+/** モデルへの依頼。システムの指示と、利用者の文 */
+export interface ModelRequest {
+	system: string;
+	user: string;
+}
 
 interface ModelResponse {
 	content: unknown[];

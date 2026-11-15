@@ -1,7 +1,7 @@
 // テストで使うセッションのエントリの組み立て
 import { basename, dirname, resolve, sep } from "node:path";
 import type { Report } from "../src/report/records.ts";
-import type { TaskView } from "../src/view/format.ts";
+import type { TaskView } from "../src/todo/tasks.ts";
 
 export const at = (clock: string): string => `2030-11-01T${clock}:00.000Z`;
 export const ms = (clock: string): number => Date.parse(at(clock));

@@ -1,8 +1,21 @@
 // 1つのセッションの間、持ち続ける状態
-import type { ExtensionOptions } from "../extension.ts";
 import type { LoadedConfig } from "./config.ts";
+import type { PatchFiles } from "./files.ts";
 import type { TimelineHost } from "./host.ts";
-import { periodLabel } from "../view/format.ts";
+import { periodLabel } from "./shared.ts";
+
+export interface ExtensionOptions {
+	files: PatchFiles;
+	loadConfig(): LoadedConfig;
+	/** 設定ファイルの場所。未設定の案内に出す */
+	configLocation: string;
+	now(): number;
+	newId(): string;
+	/** 時刻を表すタイムゾーン。undefined なら実行している環境のもの */
+	timeZone: string | undefined;
+	/** Pi Web の中で動いているかを見る場所（実行中の作業ディレクトリ）。undefined なら見ない */
+	piWebDirectory?: string;
+}
 
 export interface Session {
 	options: ExtensionOptions;

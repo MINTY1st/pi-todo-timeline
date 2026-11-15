@@ -1,7 +1,20 @@
 // 実際のファイルの読み書き
 import { mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import type { FileAccess } from "../view/page.ts";
+
+export interface FileAccess {
+	/** ファイルの中身。無ければ undefined */
+	read(path: string): string | undefined;
+	write(path: string, content: string): void;
+}
+
+/** 一覧も取れるファイルの読み書き（Pi Web の配布物に当てるときに使う） */
+export interface PatchFiles {
+	read(path: string): string | undefined;
+	/** ディレクトリの直下のファイル名。ディレクトリが無ければ undefined */
+	list(directory: string): string[] | undefined;
+	write(path: string, content: string): void;
+}
 
 const isMissing = (error: unknown): boolean => {
 	// ENOTDIR は、途中がファイルで辿れないとき（git の worktree では .git がファイル）
@@ -9,7 +22,7 @@ const isMissing = (error: unknown): boolean => {
 	return code === "ENOENT" || code === "ENOTDIR";
 };
 
-export function createFileAccess(): FileAccess & { list(directory: string): string[] | undefined } {
+export function createFileAccess(): PatchFiles {
 	return {
 		list(directory) {
 			try {

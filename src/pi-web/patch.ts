@@ -1,12 +1,8 @@
 // Pi Web の配布物のファイルに、目印つきで足す・外す
 import { join } from "node:path";
+import type { PatchFiles } from "../core/files.ts";
 
-export interface PatchFiles {
-	read(path: string): string | undefined;
-	/** ディレクトリの直下のファイル名。ディレクトリが無ければ undefined */
-	list(directory: string): string[] | undefined;
-	write(path: string, content: string): void;
-}
+export type { PatchFiles };
 
 export interface PatchOutcome {
 	ok: boolean;

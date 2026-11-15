@@ -7,8 +7,8 @@ import { reportsFromBranch } from "../report/records.ts";
 import type { Report } from "../report/records.ts";
 import { clockOf, messageOf, settingsOf } from "../core/session.ts";
 import type { Session } from "../core/session.ts";
-import { tasksFromBranch } from "./format.ts";
-import type { TaskView } from "./format.ts";
+import { tasksFromBranch } from "../todo/tasks.ts";
+import type { TaskView } from "../todo/tasks.ts";
 
 /** パネルの名前。Pi Web では、この名前のボタンが画面の下に並び、押したものだけが開く */
 export const PANEL_KEYS = { tasks: "timeline", reports: "reports" } as const;

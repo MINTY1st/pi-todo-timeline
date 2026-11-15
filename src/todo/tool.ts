@@ -5,7 +5,6 @@ import type { Session } from "../core/session.ts";
 import { isObject } from "../core/shared.ts";
 import { applyTodo, stateFromBranch, TASKS_ENTRY_TYPE } from "./state.ts";
 import type { TodoParams } from "./state.ts";
-import { refreshViews } from "../view/refresh.ts";
 
 export const TODO_TOOL_NAME = "todo";
 
@@ -60,19 +59,22 @@ function prepareArguments(raw: unknown): unknown {
 	}
 }
 
-/** 今の状態に操作を当て、変わったら記録して表示を更新する */
-function execute(session: Session, params: TodoParams, context: HostContext): ToolResult {
+/** タスクが変わったときに呼ぶ処理（表示の更新）。表示の部品を知らずに済むよう、組み立て役から受け取る */
+export type OnTasksChanged = (context: HostContext) => void;
+
+/** 今の状態に操作を当て、変わったら記録して知らせる */
+function execute(session: Session, onChanged: OnTasksChanged, params: TodoParams, context: HostContext): ToolResult {
 	const outcome = applyTodo(stateFromBranch(context.sessionManager.getBranch()), params);
 	const failed = outcome.error === undefined ? {} : { error: outcome.error };
 	const details = { action: params.action, params, tasks: outcome.state.tasks, nextId: outcome.state.nextId, ...failed };
 	if (outcome.changed) {
 		session.host.appendEntry(TASKS_ENTRY_TYPE, details);
-		if (context.hasUI) refreshViews(session, context);
+		if (context.hasUI) onChanged(context);
 	}
 	return { content: [{ type: "text", text: outcome.text }], details, ...(outcome.error === undefined ? {} : { isError: true }) };
 }
 
-export function createTodoTool(session: Session): ToolDefinition {
+export function createTodoTool(session: Session, onChanged: OnTasksChanged): ToolDefinition {
 	return {
 		name: TODO_TOOL_NAME,
 		label: "Todo",
@@ -83,6 +85,6 @@ export function createTodoTool(session: Session): ToolDefinition {
 		// 状態をセッションの記録から読んで書き戻すので、同じターンの中でも1つずつ実行する
 		executionMode: "sequential",
 		prepareArguments,
-		execute: async (_toolCallId, params, _signal, _onUpdate, context) => execute(session, params as TodoParams, context),
+		execute: async (_toolCallId, params, _signal, _onUpdate, context) => execute(session, onChanged, params as TodoParams, context),
 	};
 }

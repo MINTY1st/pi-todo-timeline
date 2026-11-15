@@ -1,31 +1,17 @@
 // pi への配線。ターンの終わりに期限を確かめ、/timeline で表示する
-import type { LoadedConfig } from "./core/config.ts";
 import { completeText, findTarget } from "./core/host.ts";
 import type { HostContext, TimelineHost } from "./core/host.ts";
 import { syncPiWeb } from "./pi-web/auto.ts";
-import type { ModelRequest } from "./report/prompt.ts";
-import type { PatchFiles } from "./pi-web/patch.ts";
+import type { ModelRequest } from "./core/host.ts";
 import { REPORT_ENTRY_TYPE, reportsFromBranch } from "./report/records.ts";
 import type { Report } from "./report/records.ts";
 import { produceReports } from "./report/reporter.ts";
 import { clockOf, createSession, messageOf, settingsOf } from "./core/session.ts";
-import type { Session } from "./core/session.ts";
-import { renderTimeline, reportHead, tasksFromBranch } from "./view/format.ts";
+import type { ExtensionOptions, Session } from "./core/session.ts";
+import { renderTimeline, reportHead } from "./view/format.ts";
+import { tasksFromBranch } from "./todo/tasks.ts";
 import { createTodoTool } from "./todo/tool.ts";
 import { clearPanels, refreshViews } from "./view/refresh.ts";
-
-export interface ExtensionOptions {
-	files: PatchFiles;
-	loadConfig(): LoadedConfig;
-	/** 設定ファイルの場所。未設定の案内に出す */
-	configLocation: string;
-	now(): number;
-	newId(): string;
-	/** 時刻を表すタイムゾーン。undefined なら実行している環境のもの */
-	timeZone: string | undefined;
-	/** Pi Web の中で動いているかを見る場所（実行中の作業ディレクトリ）。undefined なら見ない */
-	piWebDirectory?: string;
-}
 
 const COMMAND_NAME = "timeline";
 const FORCE_ARGUMENT = "now";
@@ -118,7 +104,7 @@ function close(session: Session, context: HostContext): void {
 export function createExtension(options: ExtensionOptions): (host: TimelineHost) => void {
 	return (host) => {
 		const session = createSession(options, host);
-		if (settingsOf(session).config.todoTool) host.registerTool(createTodoTool(session));
+		if (settingsOf(session).config.todoTool) host.registerTool(createTodoTool(session, (context) => refreshViews(session, context)));
 		host.on("session_start", (_event, context) => {
 			if (!context.hasUI) return;
 			refreshViews(session, context);

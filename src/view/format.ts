@@ -1,11 +1,7 @@
-// /timeline の文字の表示と、表示するタスクの読み取り
+// /timeline の文字の表示と、パネルとページが共通に使う表し方
 import type { Report } from "../report/records.ts";
-import { clip } from "../core/shared.ts";
-import { stateFromBranch } from "../todo/state.ts";
-import type { Task } from "../todo/state.ts";
-
-/** 表示するタスク。消したものは含めない */
-export type TaskView = Task & { status: "pending" | "in_progress" | "completed" };
+import { taskLines } from "../todo/tasks.ts";
+import type { TaskView } from "../todo/tasks.ts";
 
 export interface ViewInput {
 	tasks: readonly TaskView[];
@@ -19,25 +15,6 @@ export interface ViewInput {
 	notes: string[];
 }
 
-const STATUS_MARKS = { completed: "✓", in_progress: "◐", pending: "○" } as const;
-const RESULT_MAX_CHARS = 200;
-
-/**
- * 最後に記録されたタスクの状態から、消したものを除いて返す。
- * upTo を渡すと、その時刻までに記録された状態に限る（過去の区間のレポートに、後の状態を混ぜないため）。
- */
-export function tasksFromBranch(entries: Iterable<unknown>, upTo = Number.POSITIVE_INFINITY): TaskView[] {
-	return stateFromBranch(entries, upTo).tasks.filter((task): task is TaskView => task.status !== "deleted");
-}
-
-export function taskLines(tasks: readonly TaskView[]): string[] {
-	return tasks.flatMap((task) => {
-		const active = task.status === "in_progress" && task.activeForm ? `（${task.activeForm}）` : "";
-		const head = `${STATUS_MARKS[task.status]} #${task.id} ${task.subject}${active}`;
-		const result = task.status === "completed" && task.description ? [`    ${clip(task.description, RESULT_MAX_CHARS)}`] : [];
-		return [head, ...result];
-	});
-}
 
 /** 最初の活動から最後の活動までの時間。どちらかが無ければ空 */
 export function elapsedLabel(firstActivity: number | null, lastActivity: number | null): string {
@@ -58,11 +35,6 @@ export function focusOf(tasks: readonly TaskView[]): { task: TaskView; active: b
 export function topLevelReports(reports: readonly Report[]): Report[] {
 	const bundled = new Set(reports.flatMap((report) => report.children));
 	return reports.filter((report) => !bundled.has(report.id)).sort((left, right) => right.end - left.end || right.level - left.level);
-}
-
-export function periodLabel(periodMs: number): string {
-	const minutes = Math.round(periodMs / 60_000);
-	return minutes % 60 === 0 ? `${minutes / 60}時間` : `${minutes}分`;
 }
 
 /** 時刻の表し方。今日でない日には月日を前に付ける */
