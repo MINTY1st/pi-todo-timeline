@@ -1,9 +1,10 @@
 // pi への配線。ターンの終わりに期限を確かめ、/timeline で表示する
 import type { LoadedConfig } from "./config.ts";
 import { completeText, findTarget } from "./host.ts";
-import type { FileAccess } from "./page.ts";
 import type { HostContext, TimelineHost } from "./host.ts";
+import { syncPiWeb } from "./pi-web-auto.ts";
 import type { ModelRequest } from "./prompt.ts";
+import type { PatchFiles } from "./web-patch.ts";
 import { REPORT_ENTRY_TYPE, reportsFromBranch } from "./records.ts";
 import type { Report } from "./records.ts";
 import { produceReports } from "./reporter.ts";
@@ -14,7 +15,7 @@ import { createTodoTool } from "./todo-tool.ts";
 import { clearPanels, refreshViews } from "./views.ts";
 
 export interface ExtensionOptions {
-	files: FileAccess;
+	files: PatchFiles;
 	loadConfig(): LoadedConfig;
 	/** 設定ファイルの場所。未設定の案内に出す */
 	configLocation: string;
@@ -22,6 +23,8 @@ export interface ExtensionOptions {
 	newId(): string;
 	/** 時刻を表すタイムゾーン。undefined なら実行している環境のもの */
 	timeZone: string | undefined;
+	/** Pi Web の中で動いているかを見る場所（実行中の作業ディレクトリ）。undefined なら見ない */
+	piWebDirectory?: string;
 }
 
 const COMMAND_NAME = "timeline";
@@ -117,7 +120,9 @@ export function createExtension(options: ExtensionOptions): (host: TimelineHost)
 		const session = createSession(options, host);
 		if (settingsOf(session).config.todoTool) host.registerTool(createTodoTool(session));
 		host.on("session_start", (_event, context) => {
-			if (context.hasUI) refreshViews(session, context);
+			if (!context.hasUI) return;
+			refreshViews(session, context);
+			syncPiWeb(session, context);
 		});
 		host.on("turn_end", (_event, context) => onTurnEnd(session, context));
 		host.on("session_shutdown", (_event, context) => close(session, context));

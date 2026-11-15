@@ -18,10 +18,12 @@ export interface Session {
 	pageError: string | undefined;
 	/** 今出しているパネルの中身。キーはパネルの名前。出していないパネルは入っていない */
 	panelTexts: Map<string, string>;
+	/** Pi Web に当てられなかった理由のうち、最後に知らせたもの。同じ理由を何度も知らせない */
+	piWebNotice: string | undefined;
 }
 
 export function createSession(options: ExtensionOptions, host: TimelineHost): Session {
-	return { options, host, loaded: undefined, running: undefined, controller: undefined, retryAfter: 0, lastError: undefined, closed: false, excluded: false, pageError: undefined, panelTexts: new Map() };
+	return { options, host, loaded: undefined, running: undefined, controller: undefined, retryAfter: 0, lastError: undefined, closed: false, excluded: false, pageError: undefined, panelTexts: new Map(), piWebNotice: undefined };
 }
 
 export const messageOf = (error: unknown): string => (error instanceof Error ? error.message : String(error));

@@ -15,4 +15,6 @@ export default createExtension({
 	now: Date.now,
 	newId: randomUUID,
 	timeZone: undefined,
+	// Pi Web は、自分のパッケージの置き場を作業ディレクトリにして動く。そこが Pi Web なら小窓を当てる
+	piWebDirectory: process.cwd(),
 });

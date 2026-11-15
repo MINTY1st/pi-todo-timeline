@@ -84,7 +84,7 @@ function fakeHost(branch: unknown[]) {
 	return { handlers, commands, registeredTools, host };
 }
 
-function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15") {
+function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:15", piWebDirectory?: string) {
 	const state = { now: ms(clock), hasUI: true, modelFound: true, hasAuth: true, branchFailure: undefined as Error | undefined };
 	const branch: unknown[] = session();
 	const { handlers, commands, registeredTools, host } = fakeHost(branch);
@@ -107,7 +107,7 @@ function setup(rawConfig: unknown = { provider: "p", model: "m" }, clock = "10:1
 		modelRegistry: model.registry,
 	};
 	let serial = 0;
-	createExtension({ files, loadConfig: () => resolveConfig(rawConfig), configLocation: "/c/config.json", now: () => state.now, newId: () => `new${++serial}`, timeZone: "UTC" })(host as never);
+	createExtension({ files, loadConfig: () => resolveConfig(rawConfig), configLocation: "/c/config.json", now: () => state.now, newId: () => `new${++serial}`, timeZone: "UTC", piWebDirectory })(host as never);
 	const reports = () => branch.filter((entry) => (entry as { customType?: string }).customType === REPORT_ENTRY_TYPE);
 	return {
 		state, branch, reports, files,
@@ -568,4 +568,71 @@ test("モデルが tasks を JSON の文字列で渡してきても、配列に�
 
 test("todoTool を切ってあれば、ツールを登録しない（別の拡張の todo と一緒に使うとき）", () => {
 	assert.equal(setup({ provider: "p", model: "m", todoTool: false }).tool(), undefined);
+});
+
+// Windows では絶対パスにドライブが付くので、拡張が組み立てるパスと同じ形にそろえる
+const PI_WEB = absolute("/web");
+const PI_WEB_CSS = absolute("/web/.next/static/css/main.css");
+const PI_WEB_LAYOUT = absolute("/web/.next/static/chunks/app/layout-abc.js");
+const PANEL_CSS = ".extension-widget-panels{max-height:min(144px,18dvh)}";
+const LAYOUT_CHUNK = "(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[7177],{}]);";
+
+/** Pi Web の中で動いている拡張。Pi Web の置き場に、パネルの CSS と画面の共通部分のチャンクがある */
+function insidePiWeb(rawConfig: unknown = { provider: "p", model: "m" }) {
+	const pi = setup(rawConfig, "10:15", PI_WEB);
+	pi.files.put(absolute("/web/package.json"), JSON.stringify({ name: "@agegr/pi-web", version: "0.15.0" }));
+	pi.files.put(PI_WEB_CSS, PANEL_CSS);
+	pi.files.put(PI_WEB_LAYOUT, LAYOUT_CHUNK);
+	return pi;
+}
+const piWebNotices = (notices: readonly string[]) => notices.filter((notice) => notice.includes("Pi Web"));
+
+test("Pi Web の中で動いていれば、セッションの始まりに小窓と高さの上書きを足し、再読み込みを1度だけ促す", async () => {
+	const pi = insidePiWeb();
+	await pi.sessionStart();
+	assert.match(pi.files.at(PI_WEB_LAYOUT) ?? "", /installPopup\(window\)/);
+	assert.match(pi.files.at(PI_WEB_CSS) ?? "", /max-height:50dvh/);
+	assert.equal(piWebNotices(pi.notices).length, 1);
+	assert.match(piWebNotices(pi.notices)[0] ?? "", /Ctrl\+Shift\+R/);
+	await pi.sessionStart();
+	assert.equal(piWebNotices(pi.notices).length, 1, "入っていれば書かず、知らせもしない");
+});
+
+test("設定で小窓を切ってあれば、入っている小窓のスクリプトを外す", async () => {
+	const pi = insidePiWeb({ provider: "p", model: "m", webPopup: false });
+	pi.files.put(PI_WEB_LAYOUT, LAYOUT_CHUNK + "\n/* pi-todo-timeline:start */\n;installPopup(window);\n/* pi-todo-timeline:end */\n");
+	await pi.sessionStart();
+	assert.equal(pi.files.at(PI_WEB_LAYOUT), LAYOUT_CHUNK);
+});
+
+test("Pi Web の中でなければ、Pi Web のファイルには触らない", async () => {
+	const pi = setup({ provider: "p", model: "m" }, "10:15", absolute("/work"));
+	pi.files.put("/work/package.json", JSON.stringify({ name: "my-app" }));
+	pi.files.put("/work/.next/static/css/main.css", PANEL_CSS);
+	await pi.sessionStart();
+	assert.equal(pi.files.at("/work/.next/static/css/main.css"), PANEL_CSS);
+	assert.deepEqual(piWebNotices(pi.notices), []);
+});
+
+test("Pi Web のファイルに書けなくても、ページは書き、理由を1度だけ知らせる", async () => {
+	const pi = insidePiWeb();
+	const write = pi.files.write;
+	pi.files.write = (path: string, content: string) => {
+		if (path.startsWith(PI_WEB)) throw new Error("EACCES: permission denied");
+		write(path, content);
+	};
+	await pi.sessionStart();
+	await pi.sessionStart();
+	assert.ok(pi.files.at(PAGE_PATH) !== undefined, "ページは書く");
+	assert.equal(piWebNotices(pi.notices).length, 1);
+	assert.match(piWebNotices(pi.notices)[0] ?? "", /EACCES/);
+});
+
+test("小窓を足す先が無ければ、高さの上書きは当て、理由だけを1度だけ知らせる", async () => {
+	const pi = insidePiWeb();
+	pi.files.stored.delete(PI_WEB_LAYOUT);
+	await pi.sessionStart();
+	await pi.sessionStart();
+	assert.match(pi.files.at(PI_WEB_CSS) ?? "", /max-height:50dvh/);
+	assert.deepEqual(piWebNotices(pi.notices), ["Pi Web に小窓を当てられませんでした（小窓のスクリプトを足す先がありません（Pi Web の画面の共通部分のチャンクが見つかりません））"]);
 });
